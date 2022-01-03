@@ -3,13 +3,15 @@ use crate::utils::Range;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Regex<C> {
-    pub parts: Vec<RegexPart<C>>,
+    pub root_part: RegexPart<C>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RegexPart<C> {
+    Empty,
     Literal(C),
     Alternatives(Vec<RegexPart<C>>),
+    Sequence(Vec<RegexPart<C>>),
     Bracketed(Bracketed<C>),
     ParenGroup { capture: Option<Capture>, inner: Box<RegexPart<C>> },
     LineStart,
