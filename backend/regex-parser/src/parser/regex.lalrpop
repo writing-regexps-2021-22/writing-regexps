@@ -1,0 +1,19 @@
+use crate::char::NaiveChar;
+use crate::regex::{NaiveRegex, NaiveRegexPart};
+
+grammar;
+
+match {
+    // Disable whitespace skipping.
+    "[]" => { },
+} else {
+    r"." => CHAR,
+}
+
+pub Regex: NaiveRegex = <parts:RegexPart*> => NaiveRegex { parts };
+
+RegexPart: NaiveRegexPart = {
+    Char => NaiveRegexPart::Literal(<>),
+};
+
+Char: NaiveChar = <c:CHAR> => c.chars().next().unwrap().into();
