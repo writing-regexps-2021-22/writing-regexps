@@ -1,4 +1,3 @@
-mod char;
 mod parser;
 mod regex;
 mod utils;

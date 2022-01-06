@@ -1,36 +1,35 @@
-use crate::char::NaiveChar;
 use crate::utils::Range;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Regex<C> {
-    pub root_part: RegexPart<C>,
+pub struct Regex {
+    pub root_part: RegexPart,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum RegexPart<C> {
+pub enum RegexPart {
     Empty,
-    Literal(C),
-    Alternatives(Vec<RegexPart<C>>),
-    Sequence(Vec<RegexPart<C>>),
-    Bracketed(Bracketed<C>),
-    ParenGroup { capture: Option<Capture>, inner: Box<RegexPart<C>> },
+    Literal(char),
+    Alternatives(Vec<RegexPart>),
+    Sequence(Vec<RegexPart>),
+    Bracketed(Bracketed),
+    ParenGroup { capture: Option<Capture>, inner: Box<RegexPart> },
     LineStart,
     LineEnd,
-    Optional(Box<RegexPart<C>>),
-    ZeroOrMore { eagerness: Eagerness, inner: Box<RegexPart<C>> },
-    OneOrMore { eagerness: Eagerness, inner: Box<RegexPart<C>> },
-    Repeat { eagerness: Eagerness, n: RepeatSpec, inner: Box<RegexPart<C>> },
+    Optional(Box<RegexPart>),
+    ZeroOrMore { eagerness: Eagerness, inner: Box<RegexPart> },
+    OneOrMore { eagerness: Eagerness, inner: Box<RegexPart> },
+    Repeat { eagerness: Eagerness, n: RepeatSpec, inner: Box<RegexPart> },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Bracketed<C> {
-    pub alternatives: Vec<BracketedAlternative<C>>,
+pub struct Bracketed {
+    pub alternatives: Vec<BracketedAlternative>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub enum BracketedAlternative<C> {
-    Single(C),
-    Range(Range<C>),
+pub enum BracketedAlternative {
+    Single(char),
+    Range(Range<char>),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -63,8 +62,3 @@ pub enum RepeatSpec {
     AtMost(usize),
     Range(Range<usize>),
 }
-
-pub type NaiveRegex = Regex<NaiveChar>;
-pub type NaiveRegexPart = RegexPart<NaiveChar>;
-pub type NaiveBracketed = Bracketed<NaiveChar>;
-pub type NaiveBracketedAlternative = BracketedAlternative<NaiveChar>;

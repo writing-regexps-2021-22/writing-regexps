@@ -1,5 +1,4 @@
-use crate::char::NaiveChar;
-use crate::regex::{Capture, NaiveRegex, NaiveRegexPart, NamedCaptureFlavor};
+use crate::regex::{Capture, NamedCaptureFlavor, Regex, RegexPart};
 
 grammar;
 
@@ -20,49 +19,49 @@ match {
     r"." => OTHER_CHAR,
 }
 
-pub Regex: NaiveRegexPart = {
-    () => NaiveRegexPart::Empty,
+pub Regex: RegexPart = {
+    () => RegexPart::Empty,
     Alternatives,
 }
 
-Alternatives: NaiveRegexPart = {
+Alternatives: RegexPart = {
     Sequence,
     <mut part:Alternatives> PIPE <s:Sequence> => match part {
-        NaiveRegexPart::Alternatives(ref mut alts) => {
+        RegexPart::Alternatives(ref mut alts) => {
             alts.push(s);
             part
         }
-        part => NaiveRegexPart::Alternatives(vec![part, s]),
+        part => RegexPart::Alternatives(vec![part, s]),
     },
 };
 
-Sequence: NaiveRegexPart = {
+Sequence: RegexPart = {
     Atom,
     <mut part:Sequence> <c:Atom> => match part {
-        NaiveRegexPart::Sequence(ref mut items) => {
+        RegexPart::Sequence(ref mut items) => {
             items.push(c);
             part
         }
-        part => NaiveRegexPart::Sequence(vec![part, c]),
+        part => RegexPart::Sequence(vec![part, c]),
     },
 };
 
-Atom: NaiveRegexPart = {
+Atom: RegexPart = {
     CharLiteral<CharClassPlain>,
     Group,
 };
 
-Group: NaiveRegexPart = {
-    LEFT_PAREN <Regex> RIGHT_PAREN => NaiveRegexPart::ParenGroup {
+Group: RegexPart = {
+    LEFT_PAREN <Regex> RIGHT_PAREN => RegexPart::ParenGroup {
         capture: Some(Capture::Index),
         inner: Box::new(<>),
     },
-    LEFT_PAREN QUESTION_MARK COLON <Regex> RIGHT_PAREN => NaiveRegexPart::ParenGroup {
+    LEFT_PAREN QUESTION_MARK COLON <Regex> RIGHT_PAREN => RegexPart::ParenGroup {
         capture: None,
         inner: Box::new(<>),
     },
     LEFT_PAREN QUESTION_MARK LESS_THAN <g:GroupName> GREATER_THAN <r:Regex> RIGHT_PAREN
-        => NaiveRegexPart::ParenGroup
+        => RegexPart::ParenGroup
     {
         capture: Some(Capture::Name {
             name: g,
@@ -71,7 +70,7 @@ Group: NaiveRegexPart = {
         inner: Box::new(r),
     },
     LEFT_PAREN QUESTION_MARK CAP_LATIN_P LESS_THAN <g:GroupName> GREATER_THAN <r:Regex> RIGHT_PAREN
-        => NaiveRegexPart::ParenGroup
+        => RegexPart::ParenGroup
     {
         capture: Some(Capture::Name {
             name: g,
@@ -80,7 +79,7 @@ Group: NaiveRegexPart = {
         inner: Box::new(r),
     },
     LEFT_PAREN QUESTION_MARK APOSTROPHE <g:GroupName> APOSTROPHE <r:Regex> RIGHT_PAREN
-        => NaiveRegexPart::ParenGroup
+        => RegexPart::ParenGroup
     {
         capture: Some(Capture::Name {
             name: g,
@@ -99,12 +98,12 @@ GroupName: String = {
     }
 };
 
-CharLiteral<CharClass>: NaiveRegexPart = {
-    Char<CharClass> => NaiveRegexPart::Literal(<>),
+CharLiteral<CharClass>: RegexPart = {
+    Char<CharClass> => RegexPart::Literal(<>),
 };
 
-Char<CharClass>: NaiveChar = {
-    CharClass => <>.chars().next().unwrap().into(),
+Char<CharClass>: char = {
+    CharClass => <>.chars().next().unwrap(),
 };
 
 CharClassPlain = {
