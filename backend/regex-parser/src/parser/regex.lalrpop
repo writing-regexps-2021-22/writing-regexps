@@ -1,4 +1,4 @@
-use crate::regex::{Capture, NamedCaptureFlavor, Regex, RegexPart};
+use crate::regex::{Capture, NamedCaptureFlavor, RegexPart};
 
 grammar;
 
@@ -87,7 +87,6 @@ Group: RegexPart = {
         }),
         inner: Box::new(r),
     },
-    // TODO: other capture types.
 };
 
 GroupName: String = {

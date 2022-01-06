@@ -1,6 +1,4 @@
-mod parser;
-mod regex;
-mod utils;
+use regex_parser::parser::regex::RegexParser;
 
 fn input() -> String {
     let mut buf = String::new();
@@ -15,7 +13,7 @@ fn input() -> String {
 fn main() {
     eprint!("Type a regex: ");
     let line = input();
-    let parser = parser::regex::RegexParser::new();
+    let parser = RegexParser::new();
     let result = parser.parse(&line);
     let _ = dbg!(result);
 }
