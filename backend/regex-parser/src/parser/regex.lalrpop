@@ -1,5 +1,5 @@
 use crate::char::NaiveChar;
-use crate::regex::{NaiveAlternatives, NaiveRegex, NaiveRegexPart, NaiveSequence};
+use crate::regex::{Capture, NaiveRegex, NaiveRegexPart, NamedCaptureFlavor};
 
 grammar;
 
@@ -8,8 +8,16 @@ match {
     r"" => { },
 } else {
     "|" => PIPE,
+    "(" => LEFT_PAREN,
+    ")" => RIGHT_PAREN,
+    "?" => QUESTION_MARK,
+    ":" => COLON,
+    "<" => LESS_THAN,
+    ">" => GREATER_THAN,
+    "'" => APOSTROPHE,
+    "P" => CAP_LATIN_P,
 } else {
-    r"." => CHAR,
+    r"." => OTHER_CHAR,
 }
 
 pub Regex: NaiveRegexPart = {
@@ -29,8 +37,8 @@ Alternatives: NaiveRegexPart = {
 };
 
 Sequence: NaiveRegexPart = {
-    CharLiteral,
-    <mut part:Sequence> <c:CharLiteral> => match part {
+    Atom,
+    <mut part:Sequence> <c:Atom> => match part {
         NaiveRegexPart::Sequence(ref mut items) => {
             items.push(c);
             part
@@ -39,8 +47,77 @@ Sequence: NaiveRegexPart = {
     },
 };
 
-CharLiteral: NaiveRegexPart = {
-    Char => NaiveRegexPart::Literal(<>),
-}
+Atom: NaiveRegexPart = {
+    CharLiteral<CharClassPlain>,
+    Group,
+};
 
-Char: NaiveChar = <c:CHAR> => c.chars().next().unwrap().into();
+Group: NaiveRegexPart = {
+    LEFT_PAREN <Regex> RIGHT_PAREN => NaiveRegexPart::ParenGroup {
+        capture: Some(Capture::Index),
+        inner: Box::new(<>),
+    },
+    LEFT_PAREN QUESTION_MARK COLON <Regex> RIGHT_PAREN => NaiveRegexPart::ParenGroup {
+        capture: None,
+        inner: Box::new(<>),
+    },
+    LEFT_PAREN QUESTION_MARK LESS_THAN <g:GroupName> GREATER_THAN <r:Regex> RIGHT_PAREN
+        => NaiveRegexPart::ParenGroup
+    {
+        capture: Some(Capture::Name {
+            name: g,
+            flavor: NamedCaptureFlavor::Angles,
+        }),
+        inner: Box::new(r),
+    },
+    LEFT_PAREN QUESTION_MARK CAP_LATIN_P LESS_THAN <g:GroupName> GREATER_THAN <r:Regex> RIGHT_PAREN
+        => NaiveRegexPart::ParenGroup
+    {
+        capture: Some(Capture::Name {
+            name: g,
+            flavor: NamedCaptureFlavor::AnglesWithP,
+        }),
+        inner: Box::new(r),
+    },
+    LEFT_PAREN QUESTION_MARK APOSTROPHE <g:GroupName> APOSTROPHE <r:Regex> RIGHT_PAREN
+        => NaiveRegexPart::ParenGroup
+    {
+        capture: Some(Capture::Name {
+            name: g,
+            flavor: NamedCaptureFlavor::Apostrophes,
+        }),
+        inner: Box::new(r),
+    },
+    // TODO: other capture types.
+};
+
+GroupName: String = {
+    CharClassIdent => String::from(<>),
+    <mut name:GroupName> <s:CharClassIdent> => {
+        name.push_str(s);
+        name
+    }
+};
+
+CharLiteral<CharClass>: NaiveRegexPart = {
+    Char<CharClass> => NaiveRegexPart::Literal(<>),
+};
+
+Char<CharClass>: NaiveChar = {
+    CharClass => <>.chars().next().unwrap().into(),
+};
+
+CharClassPlain = {
+    OTHER_CHAR,
+    COLON,
+    LESS_THAN,
+    GREATER_THAN,
+    APOSTROPHE,
+    CAP_LATIN_P,
+};
+
+CharClassIdent = {
+    // This is a bit too permissive, but we can filter out unwanted chars during post-processing.
+    OTHER_CHAR,
+    CAP_LATIN_P,
+}
