@@ -18,7 +18,6 @@ fn test_basics() {
     assert_eq!(parser.parse(""), Ok(RegexPart::Empty));
     assert_eq!(parser.parse("тест юникода"), Ok(lit!("тест юникода")));
     assert_eq!(parser.parse("\t  whitespace   "), Ok(lit!("\t  whitespace   ")));
-    //assert_eq!(parser.parse("\r\n   \t\n"), Ok(lit!("\r\n   \t\n"))); // Fails
 }
 
 #[test]
@@ -119,6 +118,20 @@ fn test_groups() {
         })
     );
     assert_eq!(
+        parser.parse("()"),
+        Ok(RegexPart::ParenGroup {
+            capture: Some(Capture::Index),
+            inner: Box::new(RegexPart::Empty),
+        })
+    );
+    assert_eq!(
+        parser.parse("(?:)"),
+        Ok(RegexPart::ParenGroup {
+            capture: None,
+            inner: Box::new(RegexPart::Empty),
+        })
+    );
+    assert_eq!(
         parser.parse("(?<a>)"),
         Ok(RegexPart::ParenGroup {
             capture: Some(Capture::Name {
@@ -147,5 +160,47 @@ fn test_groups() {
             }),
             inner: Box::new(RegexPart::Empty),
         })
+    );
+}
+
+#[test]
+fn test_groups_with_alternatives() {
+    let parser = RegexParser::new();
+    assert_eq!(
+        parser.parse("aaa|(bbb|ccc)"),
+        Ok(RegexPart::Alternatives(vec![
+            lit!("aaa"),
+            RegexPart::ParenGroup {
+                capture: Some(Capture::Index),
+                inner: Box::new(RegexPart::Alternatives(vec![
+                    lit!("bbb"),
+                    lit!("ccc"),
+                ]))
+            }
+        ]))
+    );
+    assert_eq!(
+        parser.parse("aaa|(?:(ddd|bbb)zzz|ccc)"),
+        Ok(RegexPart::Alternatives(vec![
+            lit!("aaa"),
+            RegexPart::ParenGroup {
+                capture: None,
+                inner: Box::new(RegexPart::Alternatives(vec![
+                    RegexPart::Sequence(vec![
+                        RegexPart::ParenGroup {
+                            capture: Some(Capture::Index),
+                            inner: Box::new(RegexPart::Alternatives(vec![
+                                lit!("ddd"),
+                                lit!("bbb")
+                            ]))
+                        },
+                        lit!(char 'z'),
+                        lit!(char 'z'),
+                        lit!(char 'z'),
+                    ]),
+                    lit!("ccc"),
+                ]))
+            }
+        ]))
     );
 }
