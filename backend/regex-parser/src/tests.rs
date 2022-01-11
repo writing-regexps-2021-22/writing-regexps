@@ -17,7 +17,10 @@ fn test_basics() {
     assert_eq!(parser.parse("x"), Ok(lit!(char 'x')));
     assert_eq!(parser.parse(""), Ok(RegexPart::Empty));
     assert_eq!(parser.parse("тест юникода"), Ok(lit!("тест юникода")));
-    assert_eq!(parser.parse("\t  whitespace   "), Ok(lit!("\t  whitespace   ")));
+    assert_eq!(
+        parser.parse("\t  whitespace   "),
+        Ok(lit!("\t  whitespace   "))
+    );
 }
 
 #[test]
@@ -41,6 +44,8 @@ fn test_alternatives() {
             lit!(char 'e'),
         ]))
     );
+    assert!(parser.parse("a||b").is_err());
+    assert!(parser.parse("a|b|").is_err());
 }
 
 #[test]
@@ -161,6 +166,14 @@ fn test_groups() {
             inner: Box::new(RegexPart::Empty),
         })
     );
+    assert!(parser.parse("(a").is_err());
+    assert!(parser.parse("(?a)").is_err());
+    assert!(parser.parse("(?P)").is_err());
+    assert!(parser.parse(")").is_err());
+    assert!(parser.parse("(?P'a')").is_err());
+    assert!(parser.parse("(?'a)").is_err());
+    assert!(parser.parse("(?<a)").is_err());
+    assert!(parser.parse("(?>)").is_err());
 }
 
 #[test]
@@ -172,10 +185,7 @@ fn test_groups_with_alternatives() {
             lit!("aaa"),
             RegexPart::ParenGroup {
                 capture: Some(Capture::Index),
-                inner: Box::new(RegexPart::Alternatives(vec![
-                    lit!("bbb"),
-                    lit!("ccc"),
-                ]))
+                inner: Box::new(RegexPart::Alternatives(vec![lit!("bbb"), lit!("ccc"),]))
             }
         ]))
     );
@@ -203,4 +213,60 @@ fn test_groups_with_alternatives() {
             }
         ]))
     );
+}
+
+#[test]
+fn test_quantifiers() {
+    let parser = RegexParser::new();
+    assert_eq!(
+        parser.parse("ц?"),
+        Ok(RegexPart::Optional(Box::new(lit!(char 'ц'))))
+    );
+    assert_eq!(
+        parser.parse("()?"),
+        Ok(RegexPart::Optional(Box::new(RegexPart::ParenGroup {
+            capture: Some(Capture::Index),
+            inner: Box::new(RegexPart::Empty),
+        })))
+    );
+    assert_eq!(
+        parser.parse("abc?"),
+        Ok(RegexPart::Sequence(vec![
+            lit!(char 'a'),
+            lit!(char 'b'),
+            RegexPart::Optional(Box::new(lit!(char 'c'))),
+        ]))
+    );
+    assert_eq!(
+        parser.parse("a|b?"),
+        Ok(RegexPart::Alternatives(vec![
+            lit!(char 'a'),
+            RegexPart::Optional(Box::new(lit!(char 'b'))),
+        ]))
+    );
+    assert_eq!(
+        parser.parse("a?|b?"),
+        Ok(RegexPart::Alternatives(vec![
+            RegexPart::Optional(Box::new(lit!(char 'a'))),
+            RegexPart::Optional(Box::new(lit!(char 'b'))),
+        ]))
+    );
+    assert_eq!(
+        parser.parse("(?:a?)?"),
+        Ok(RegexPart::Optional(Box::new(RegexPart::ParenGroup {
+            capture: None,
+            inner: Box::new(RegexPart::Optional(Box::new(lit!(char 'a')))),
+        })))
+    );
+    assert_eq!(
+        parser.parse("(a?)?"),
+        Ok(RegexPart::Optional(Box::new(RegexPart::ParenGroup {
+            capture: Some(Capture::Index),
+            inner: Box::new(RegexPart::Optional(Box::new(lit!(char 'a')))),
+        })))
+    );
+    assert!(parser.parse("a???").is_err());
+    assert!(parser.parse("?").is_err());
+    assert!(parser.parse("(?)").is_err());
+    assert!(parser.parse("??").is_err());
 }

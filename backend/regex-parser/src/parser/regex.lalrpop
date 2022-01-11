@@ -36,8 +36,8 @@ Alternatives: RegexPart = {
 };
 
 Sequence: RegexPart = {
-    Atom,
-    <mut part:Sequence> <c:Atom> => match part {
+    HalfAtom,
+    <mut part:Sequence> <c:HalfAtom> => match part {
         RegexPart::Sequence(ref mut items) => {
             items.push(c);
             part
@@ -46,10 +46,15 @@ Sequence: RegexPart = {
     },
 };
 
+HalfAtom: RegexPart = {
+    <Atom> QUESTION_MARK => RegexPart::Optional(Box::new(<>)),
+    Atom,
+};
+
 Atom: RegexPart = {
     CharLiteral<CharClassPlain>,
     Group,
-};
+}
 
 Group: RegexPart = {
     LEFT_PAREN <Regex> RIGHT_PAREN => RegexPart::ParenGroup {
