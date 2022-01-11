@@ -15,7 +15,7 @@ pub enum RegexPart {
     ParenGroup { capture: Option<Capture>, inner: Box<RegexPart> },
     LineStart,
     LineEnd,
-    Optional(Box<RegexPart>),
+    Optional { eagerness: Eagerness, inner: Box<RegexPart> },
     ZeroOrMore { eagerness: Eagerness, inner: Box<RegexPart> },
     OneOrMore { eagerness: Eagerness, inner: Box<RegexPart> },
     Repeat { eagerness: Eagerness, n: RepeatSpec, inner: Box<RegexPart> },

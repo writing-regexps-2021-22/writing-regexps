@@ -1,5 +1,5 @@
 use crate::parser::regex::RegexParser;
-use crate::regex::{Capture, NamedCaptureFlavor, RegexPart};
+use crate::regex::{Capture, NamedCaptureFlavor, RegexPart, Eagerness};
 
 macro_rules! lit {
     ($s:expr) => {
@@ -220,50 +220,80 @@ fn test_quantifiers() {
     let parser = RegexParser::new();
     assert_eq!(
         parser.parse("ц?"),
-        Ok(RegexPart::Optional(Box::new(lit!(char 'ц'))))
+        Ok(RegexPart::Optional {
+            eagerness: Eagerness::Greedy,
+            inner: Box::new(lit!(char 'ц'))
+        })
     );
     assert_eq!(
         parser.parse("()?"),
-        Ok(RegexPart::Optional(Box::new(RegexPart::ParenGroup {
-            capture: Some(Capture::Index),
-            inner: Box::new(RegexPart::Empty),
-        })))
+        Ok(RegexPart::Optional {
+            eagerness: Eagerness::Greedy,
+            inner: Box::new(RegexPart::ParenGroup {
+                capture: Some(Capture::Index),
+                inner: Box::new(RegexPart::Empty),
+            })
+        })
     );
     assert_eq!(
         parser.parse("abc?"),
         Ok(RegexPart::Sequence(vec![
             lit!(char 'a'),
             lit!(char 'b'),
-            RegexPart::Optional(Box::new(lit!(char 'c'))),
+            RegexPart::Optional {
+                eagerness: Eagerness::Greedy,
+                inner: Box::new(lit!(char 'c'))
+            },
         ]))
     );
     assert_eq!(
         parser.parse("a|b?"),
         Ok(RegexPart::Alternatives(vec![
             lit!(char 'a'),
-            RegexPart::Optional(Box::new(lit!(char 'b'))),
+            RegexPart::Optional {
+                eagerness: Eagerness::Greedy,
+                inner: Box::new(lit!(char 'b'))
+            },
         ]))
     );
     assert_eq!(
         parser.parse("a?|b?"),
         Ok(RegexPart::Alternatives(vec![
-            RegexPart::Optional(Box::new(lit!(char 'a'))),
-            RegexPart::Optional(Box::new(lit!(char 'b'))),
+            RegexPart::Optional {
+                eagerness: Eagerness::Greedy,
+                inner: Box::new(lit!(char 'a'))
+            },
+            RegexPart::Optional {
+                eagerness: Eagerness::Greedy,
+                inner: Box::new(lit!(char 'b'))
+            },
         ]))
     );
     assert_eq!(
         parser.parse("(?:a?)?"),
-        Ok(RegexPart::Optional(Box::new(RegexPart::ParenGroup {
-            capture: None,
-            inner: Box::new(RegexPart::Optional(Box::new(lit!(char 'a')))),
-        })))
+        Ok(RegexPart::Optional {
+            eagerness: Eagerness::Greedy,
+            inner: Box::new(RegexPart::ParenGroup {
+                capture: None,
+                inner: Box::new(RegexPart::Optional {
+                    eagerness: Eagerness::Greedy,
+                    inner: Box::new(lit!(char 'a'))
+                }),
+            })
+        })
     );
     assert_eq!(
         parser.parse("(a?)?"),
-        Ok(RegexPart::Optional(Box::new(RegexPart::ParenGroup {
-            capture: Some(Capture::Index),
-            inner: Box::new(RegexPart::Optional(Box::new(lit!(char 'a')))),
-        })))
+        Ok(RegexPart::Optional {
+            eagerness: Eagerness::Greedy,
+            inner: Box::new(RegexPart::ParenGroup {
+                capture: Some(Capture::Index),
+                inner: Box::new(RegexPart::Optional {
+                    eagerness: Eagerness::Greedy,
+                    inner: Box::new(lit!(char 'a'))
+                }),
+            })
+        })
     );
     assert!(parser.parse("a???").is_err());
     assert!(parser.parse("?").is_err());

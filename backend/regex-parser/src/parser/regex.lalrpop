@@ -1,4 +1,4 @@
-use crate::regex::{Capture, NamedCaptureFlavor, RegexPart};
+use crate::regex::{Capture, Eagerness, NamedCaptureFlavor, RegexPart};
 
 grammar;
 
@@ -47,7 +47,10 @@ Sequence: RegexPart = {
 };
 
 HalfAtom: RegexPart = {
-    <Atom> QUESTION_MARK => RegexPart::Optional(Box::new(<>)),
+    <Atom> QUESTION_MARK => RegexPart::Optional {
+        eagerness: Eagerness::Greedy,
+        inner: Box::new(<>),
+    },
     Atom,
 };
 
