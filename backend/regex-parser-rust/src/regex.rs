@@ -36,7 +36,17 @@ pub enum BracketedAlternative<C> {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Capture {
     Index,
-    Name(String),
+    Name { name: String, flavor: NamedCaptureFlavor },
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub enum NamedCaptureFlavor {
+    // (?P<name>group)
+    AnglesWithP,
+    // (?<name>group)
+    Angles,
+    // (?'name'group)
+    Apostrophes,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
