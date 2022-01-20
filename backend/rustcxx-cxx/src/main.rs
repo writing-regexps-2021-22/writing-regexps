@@ -5,6 +5,7 @@ mod mangle;
 mod separator;
 
 use crate::bindings::Bindings;
+use crate::datatype::Direction;
 use crate::function::{Method, SelfKind};
 use crate::mangle::Mangle;
 use crate::separator::Separator;
@@ -98,9 +99,20 @@ fn generate_cpp(config: &Bindings, out: &mut impl Write) -> io::Result<()> {
             let mut sep = Separator::new(", ");
             let mut sep_fn = sep.as_fn_mut();
 
-            write!(out, "    {} {}(", func.return_type.cxx_type(), func_name)?;
+            write!(
+                out,
+                "    {} {}(",
+                func.return_type.cxx_type(Direction::Out),
+                func_name
+            )?;
             for arg in func.args.iter() {
-                write!(out, "{}{} {}", sep_fn(), arg.arg_type.cxx_type(), arg.name)?;
+                write!(
+                    out,
+                    "{}{} {}",
+                    sep_fn(),
+                    arg.arg_type.cxx_type(Direction::In),
+                    arg.name
+                )?;
             }
             let maybe_const = match func.self_kind {
                 SelfKind::Ref => " const",

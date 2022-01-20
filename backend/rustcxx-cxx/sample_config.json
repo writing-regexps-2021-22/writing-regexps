@@ -6,9 +6,9 @@
                 "args": [
                     {"name": "x", "type": "bool"},
                     {"name": "y", "type": "str"},
-                    {"name": "z", "type": {"slice": "i32"}}
+                    {"name": "z", "type": {"slice": {"wrapped": "cr::baz::Quux"}}}
                 ],
-                "return": "mut_ptr"
+                "return": "str"
             }
         }
     }

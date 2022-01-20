@@ -9,12 +9,18 @@ pub enum InvalidDataType {
 impl std::fmt::Display for InvalidDataType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::SliceOfComplex => write!(f, "Slices of non-primitives are not supported")
+            Self::SliceOfComplex => write!(f, "Slices of non-primitives are not supported"),
         }
     }
 }
 
 impl std::error::Error for InvalidDataType {}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum Direction {
+    In,
+    Out,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -66,18 +72,12 @@ impl DataType {
             Self::ConstPtr => vec![String::from("const void*")],
             Self::MutPtr => vec![String::from("void*")],
             Self::Str => vec![String::from("char*"), String::from("size_t")],
-            Self::Slice(data_type) => {
-                let mut vec = data_type.c_types();
-                assert_eq!(vec.len(), 1);
-                vec[0].push('*');
-                vec.push(String::from("size_t"));
-                vec
-            }
+            Self::Slice(_) => vec![String::from("void*"), String::from("size_t")],
             Self::Wrapped(type_name) => vec![type_name.to_string()],
         }
     }
 
-    pub fn cxx_type(&self) -> String {
+    pub fn cxx_type(&self, direction: Direction) -> String {
         match self {
             Self::U8 => String::from("uint8_t"),
             Self::U16 => String::from("uint16_t"),
@@ -91,8 +91,18 @@ impl DataType {
             Self::Bool => String::from("bool"),
             Self::ConstPtr => String::from("const void*"),
             Self::MutPtr => String::from("void*"),
-            Self::Str => String::from("std::string_view"),
-            Self::Slice(data_type) => format!("std::span<{}>", data_type.cxx_type()),
+            Self::Str => String::from(match direction {
+                Direction::In => "std::string_view",
+                Direction::Out => "std::string",
+            }),
+            Self::Slice(data_type) => format!(
+                "{}<{}>",
+                match direction {
+                    Direction::In => "std::span",
+                    Direction::Out => "std::vector",
+                },
+                data_type.cxx_type(direction)
+            ),
             Self::Wrapped(type_name) => type_name.to_string(),
         }
     }
