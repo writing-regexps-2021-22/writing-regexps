@@ -68,6 +68,8 @@ impl DataType {
             Self::Str => vec![String::from("char*"), String::from("size_t")],
             Self::Slice(data_type) => {
                 let mut vec = data_type.c_types();
+                assert_eq!(vec.len(), 1);
+                vec[0].push('*');
                 vec.push(String::from("size_t"));
                 vec
             }

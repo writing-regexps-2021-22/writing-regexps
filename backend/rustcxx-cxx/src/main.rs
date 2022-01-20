@@ -111,6 +111,7 @@ fn generate_cpp(config: &Bindings, out: &mut impl Write) -> io::Result<()> {
 
         writeln!(out, "")?;
         writeln!(out, "private:")?;
+        writeln!(out, "    explicit {this}(void* ptr);", this = type_basename)?;
         writeln!(out, "    void* m_ptr;")?;
         writeln!(out, "}};")?;
         writeln!(out, "}} // namespace {}", type_name.namespace())?;
