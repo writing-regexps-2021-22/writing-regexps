@@ -1,12 +1,15 @@
 {
     "cr::foo::Bar": {
-        "foo": {
-            "self": "ref",
-            "args": [
-                {"name": "x", "type": "bool"},
-                {"name": "y", "type": "u32"}
-            ],
-            "return": "mut_ptr"
+        "methods": {
+            "foo": {
+                "self": "ref",
+                "args": [
+                    {"name": "x", "type": "bool"},
+                    {"name": "y", "type": "str"},
+                    {"name": "z", "type": {"slice": "i32"}}
+                ],
+                "return": "mut_ptr"
+            }
         }
     }
 }
