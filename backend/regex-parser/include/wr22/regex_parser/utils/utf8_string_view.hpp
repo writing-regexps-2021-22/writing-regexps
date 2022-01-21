@@ -4,6 +4,7 @@
 #include <compare>
 #include <cstddef>
 #include <exception>
+#include <iterator>
 #include <optional>
 #include <string_view>
 
@@ -68,6 +69,12 @@ class UnicodeStringViewIterator {
     friend class UnicodeStringView;
 
 public:
+    /// The type of value this iterator yields. Part of the STL iterator interface.
+    using value_type = char32_t;
+
+    /// This iterator's category. Part of the STL iterator interface.
+    using category_type = std::forward_iterator_tag;
+
     /// The default constructor is meaningless and is thus deleted.
     UnicodeStringViewIterator() = delete;
 
@@ -83,7 +90,8 @@ public:
     /// incomplete value.
     char32_t operator*();
 
-    std::strong_ordering operator<=>(const UnicodeStringViewIterator& rhs) const;
+    bool operator==(const UnicodeStringViewIterator& rhs) const;
+    bool operator!=(const UnicodeStringViewIterator& rhs) const;
 
 private:
     using UnderlyingIterator = std::string_view::const_iterator;

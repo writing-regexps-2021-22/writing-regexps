@@ -4,6 +4,7 @@
 #include <wr22/regex_parser/utils/adt.hpp>
 
 // stl
+#include <iosfwd>
 #include <variant>
 #include <vector>
 
@@ -37,7 +38,8 @@ namespace part {
 class Part : public part::Adt {
 public:
     using part::Adt::Adt;
-    using part::Adt::operator==;
 };
+
+std::ostream& operator<<(std::ostream& out, const Part& part);
 
 }  // namespace wr22::regex_parser::regex

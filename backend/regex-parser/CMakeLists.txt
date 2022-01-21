@@ -12,6 +12,11 @@ target_compile_options(
     PUBLIC
         -Werror=return-type
 )
+target_link_libraries(
+    wr22-regex-parser
+    PUBLIC
+        fmt
+)
 
 if (${REGEX_PARSER_BUILD_TESTS})
     find_package(Catch2 2 REQUIRED)

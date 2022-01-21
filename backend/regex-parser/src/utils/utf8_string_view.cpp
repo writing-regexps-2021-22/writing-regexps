@@ -52,13 +52,17 @@ char32_t UnicodeStringViewIterator::operator*() {
     return codepoint_opt.value();
 }
 
-std::strong_ordering UnicodeStringViewIterator::operator<=>(
-    const UnicodeStringViewIterator& rhs) const {
-    return m_iter <=> rhs.m_iter;
+bool UnicodeStringViewIterator::operator==(const UnicodeStringViewIterator& rhs) const {
+    return m_iter == rhs.m_iter;
+}
+
+bool UnicodeStringViewIterator::operator!=(const UnicodeStringViewIterator& rhs) const {
+    return !(*this == rhs);
 }
 
 std::optional<char32_t> UnicodeStringViewIterator::decode_current_codepoint() {
-    auto boost_codepoint = utf_traits::decode(m_iter, m_end);
+    auto iter_copy = m_iter;
+    auto boost_codepoint = utf_traits::decode(iter_copy, m_end);
     if (!boost::locale::utf::is_valid_codepoint(boost_codepoint)) {
         return std::nullopt;
     }
