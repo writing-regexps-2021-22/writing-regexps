@@ -10,6 +10,10 @@
 
 namespace wr22::regex_parser::regex {
 
+bool part::Group::operator==(const part::Group& rhs) const {
+    return capture == rhs.capture && *inner == *rhs.inner;
+}
+
 std::ostream& operator<<(std::ostream& out, const Part& part) {
     part.visit(
         [&out](const part::Empty&) { out << "Empty"; },
@@ -33,7 +37,6 @@ std::ostream& operator<<(std::ostream& out, const Part& part) {
             out << " }";
         },
         [&out](const part::Sequence& part) {
-            using utf_traits = boost::locale::utf::utf_traits<char>;
             out << "Sequence { ";
             bool first = true;
             for (const auto& item : part.items) {
@@ -44,6 +47,9 @@ std::ostream& operator<<(std::ostream& out, const Part& part) {
                 out << item;
             }
             out << " }";
+        },
+        [&out](const part::Group& part) {
+            out << "Group { capture: " << part.capture << ", inner: " << *part.inner << " }";
         });
     return out;
 }

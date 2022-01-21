@@ -1,11 +1,12 @@
 #pragma once
 
 // wr22
+#include <wr22/regex_parser/regex/capture.hpp>
 #include <wr22/regex_parser/utils/adt.hpp>
 
 // stl
 #include <iosfwd>
-#include <variant>
+#include <memory>
 #include <vector>
 
 namespace wr22::regex_parser::regex {
@@ -32,7 +33,13 @@ namespace part {
         bool operator==(const Sequence& rhs) const = default;
     };
 
-    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence>;
+    struct Group {
+        Capture capture;
+        std::unique_ptr<Part> inner;
+        bool operator==(const Group& rhs) const;
+    };
+
+    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group>;
 }  // namespace part
 
 class Part : public part::Adt {

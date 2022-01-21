@@ -3,6 +3,7 @@
 // STL
 #include <exception>
 #include <stdexcept>
+#include <string>
 
 namespace wr22::regex_parser::parser::errors {
 
@@ -34,4 +35,4 @@ private:
     char32_t m_char_got;
 };
 
-}
+}  // namespace wr22::regex_parser::parser::errors

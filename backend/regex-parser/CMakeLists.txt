@@ -11,6 +11,7 @@ target_compile_options(
     wr22-regex-parser
     PUBLIC
         -Werror=return-type
+        -Werror=switch
 )
 target_link_libraries(
     wr22-regex-parser

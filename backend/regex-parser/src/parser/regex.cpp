@@ -37,12 +37,14 @@ public:
         // Either this is the only alternative (in which case we flatten the AST and return the only
         // alternative itself)...
         if (lookahead() != U'|') {
-            advance(1, "`|`");
             return part;
         }
 
         // ... or we will be constructing a vector of alternatives.
-        auto alternatives = std::vector{std::move(part)};
+        // Note: we cannot use an initializer list, because this would
+        // entail copying `part`, whose copy constructor is deleted.
+        std::vector<regex::Part> alternatives;
+        alternatives.push_back(std::move(part));
         while (lookahead() == U'|') {
             advance(1, "`|`");
             alternatives.push_back(parse_sequence());
@@ -56,11 +58,12 @@ public:
             return part;
         }
 
-        auto parts = std::vector{std::move(part)};
+        std::vector<regex::Part> items;
+        items.push_back(std::move(part));
         while (can_start_atom(lookahead())) {
-            parts.push_back(parse_atom());
+            items.push_back(parse_atom());
         }
-        return regex::part::Sequence{std::move(parts)};
+        return regex::part::Sequence{std::move(items)};
     }
 
     regex::Part parse_atom() {
