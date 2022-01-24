@@ -44,7 +44,7 @@ public:
     ///
     /// @param position the 0-based position in the input when the parser has encountered the end of
     /// input.
-    /// @char_got the character that the parser has received instead of the end of input.
+    /// @param char_got the character that the parser has received instead of the end of input.
     ExpectedEnd(size_t position, char32_t char_got);
 
     /// Get the input position. See the constructor docs for a more detailed description.
