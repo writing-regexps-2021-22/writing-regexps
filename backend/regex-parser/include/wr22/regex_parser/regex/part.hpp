@@ -71,6 +71,9 @@ namespace part {
     /// <https://www.regular-expressions.info/brackets.html> for an introduction to or a recap of
     /// regex groups and capturing.
     struct Group {
+        /// Convenience constructor.
+        Group(Capture capture, Part inner);
+
         /// Capture behavior.
         Capture capture;
         /// The (smart) pointer to the group contents.

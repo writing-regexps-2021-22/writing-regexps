@@ -10,6 +10,9 @@
 
 namespace wr22::regex_parser::regex {
 
+part::Group::Group(Capture capture, Part inner)
+    : capture(std::move(capture)), inner(std::make_unique<Part>(std::move(inner))) {}
+
 bool part::Group::operator==(const part::Group& rhs) const {
     return capture == rhs.capture && *inner == *rhs.inner;
 }
