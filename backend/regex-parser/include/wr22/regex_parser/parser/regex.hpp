@@ -22,7 +22,7 @@ namespace wr22::regex_parser::parser {
 /// separately. See the docs for the `errors.hpp` file for details.
 ///
 /// @returns the parsed regex AST if the parsing succeeds.
-/// @throws `errors::ParseError` if the parsing fails.
+/// @throws errors::ParseError if the parsing fails.
 regex::Part parse_regex(const utils::UnicodeStringView& regex);
 
 }  // namespace wr22::regex_parser::parser
