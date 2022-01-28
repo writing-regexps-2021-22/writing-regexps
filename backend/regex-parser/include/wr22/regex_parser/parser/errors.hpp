@@ -44,7 +44,7 @@ public:
     ///
     /// @param position the 0-based position in the input when the parser has encountered the end of
     /// input.
-    /// @char_got the character that the parser has received instead of the end of input.
+    /// @param char_got the character that the parser has received instead of the end of input.
     ExpectedEnd(size_t position, char32_t char_got);
 
     /// Get the input position. See the constructor docs for a more detailed description.
@@ -56,6 +56,32 @@ public:
 private:
     size_t m_position;
     char32_t m_char_got;
+};
+
+/// The error when the parser got a character it didn't expect at the current position.
+class UnexpectedChar : public ParseError {
+public:
+    /// Constructor.
+    ///
+    /// @param position the 0-based position in the input when the parser has encountered the
+    /// unexpected character.
+    /// @param char_got the character that the parser has received.
+    /// @param expected a textual description of a class of characters expected instead.
+    UnexpectedChar(size_t position, char32_t char_got, std::string expected);
+
+    /// Get the input position. See the constructor docs for a more detailed description.
+    size_t position() const;
+    /// Get the character the parser has received. See the constructor docs for a more detailed
+    /// description.
+    char32_t char_got() const;
+    /// Get the description of expected characters. See the constructor docs for a more detailed
+    /// description.
+    const std::string& expected() const;
+
+private:
+    size_t m_position;
+    char32_t m_char_got;
+    std::string m_expected;
 };
 
 }  // namespace wr22::regex_parser::parser::errors
