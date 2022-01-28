@@ -20,6 +20,7 @@ using regex_parser_tests::Equals;
 using regex_parser_tests::vec;
 using wr22::regex_parser::parser::parse_regex;
 using wr22::regex_parser::parser::errors::ExpectedEnd;
+using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
 using wr22::regex_parser::regex::Capture;
 using wr22::regex_parser::regex::Part;
@@ -116,7 +117,67 @@ TEST_CASE("Groups", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("(?P<ccc>)"))
         == Part(part::Group(capture::Name{"ccc"}, part::Empty{})));
-    CHECK_THROWS_MATCHES("(a", UnexpectedEnd, Predicate<UnexpectedEnd>([](const auto& e) {
-                             return e.position() == 2;
-                         }));
+
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(a")),
+        UnexpectedEnd,
+        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 2; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?a)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 2 && e.char_got() == U'a'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?P)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 3 && e.char_got() == U')'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView(")")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U')'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?P'a')")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 3 && e.char_got() == U'\''; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?'a)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 4 && e.char_got() == U')'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?<a)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 4 && e.char_got() == U')'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?>)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 4 && e.char_got() == U')'; }));
+}
+
+TEST_CASE("Groups with alternatives", "[regex]") {
+    CHECK(
+        parse_regex(UnicodeStringView("aaa|(bbb|ccc)"))
+        == Part(part::Alternatives{vec<Part>(
+            lit(U"aaa"),
+            part::Group(
+                capture::Index{},
+                part::Alternatives{vec<Part>(lit(U"bbb"), lit(U"ccc"))}))}));
+
+    CHECK(
+        parse_regex(UnicodeStringView("aaa|(?:(ddd|bbb)zzz|ccc)"))
+        == Part(part::Alternatives{vec<Part>(
+            lit(U"aaa"),
+            part::Group(
+                capture::None{},
+                part::Sequence{vec<Part>(
+                    part::Alternatives{vec<Part>(lit(U"ddd"), lit(U"bbb"))},
+                    part::Literal{U'z'},
+                    part::Literal{U'z'},
+                    part::Literal{U'z'})}),
+            lit(U"ccc"))}));
 }
