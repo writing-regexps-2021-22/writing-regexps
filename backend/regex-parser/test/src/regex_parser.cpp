@@ -30,13 +30,19 @@ Part lit(const std::u32string_view& str) {
 }  // namespace
 
 TEST_CASE("Basics", "[regex]") {
-    REQUIRE(parse_regex(UnicodeStringView("foo")) == Part(lit(U"foo")));
+    {
+        auto regex = UnicodeStringView("foo");
+        auto ground_truth = lit(U"foo");
+        REQUIRE(parse_regex(regex) == Part(std::move(ground_truth)));
+    }
 }
 
 TEST_CASE("Alternatives", "[regex]") {
-    REQUIRE(
-        parse_regex(UnicodeStringView("a|bc"))
-        == Part(part::Alternatives{vec<Part>(
+    {
+        auto regex = UnicodeStringView("a|bc");
+        auto ground_truth = part::Alternatives{vec<Part>(
             part::Literal{U'a'},
-            part::Sequence{vec<Part>(part::Literal{U'b'}, part::Literal{U'c'})})}));
+            part::Sequence{vec<Part>(part::Literal{U'b'}, part::Literal{U'c'})})};
+        REQUIRE(parse_regex(regex) == Part(std::move(ground_truth)));
+    }
 }
