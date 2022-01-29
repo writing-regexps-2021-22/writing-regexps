@@ -55,6 +55,7 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::Part parse_regex() {
+        // Empty regexes are handled as empty sequences.
         return parse_alternatives();
     }
 
@@ -65,7 +66,7 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::Part parse_alternatives() {
-        auto part = parse_sequence();
+        auto part = parse_sequence_or_empty();
         // Either this is the only alternative (in which case we flatten the AST and return the only
         // alternative itself)...
         if (lookahead() != U'|') {
@@ -79,7 +80,7 @@ public:
         alternatives.push_back(std::move(part));
         while (lookahead() == U'|') {
             advance(1, "`|`");
-            alternatives.push_back(parse_sequence());
+            alternatives.push_back(parse_sequence_or_empty());
         }
         return regex::part::Alternatives{std::move(alternatives)};
     }
@@ -102,6 +103,18 @@ public:
             items.push_back(parse_atom());
         }
         return regex::part::Sequence{std::move(items)};
+    }
+
+    /// Intermediate rule: parse a possibly empty sequence of atoms.
+    ///
+    /// @returns `regex::part::Empty` if the sequence is empty, or calls `parse_sequence` otherwise.
+    ///
+    /// @throws errors::ParseError if the input cannot be parsed.
+    regex::Part parse_sequence_or_empty() {
+        if (ends_regex(lookahead())) {
+            return regex::part::Empty{};
+        }
+        return parse_sequence();
     }
 
     /// Intermediate rule: parse an atom.
@@ -135,13 +148,65 @@ public:
         return regex::part::Literal{c.value()};
     }
 
-    /// [WIP] Intermediate rule: parse a parenthesized group (any capture variant).
-    ///
-    /// Not currently implemented.
+    /// Intermediate rule: parse a parenthesized group (any capture variant).
     ///
     /// @returns the parsed group (`regex::part::Group`).
     regex::Part parse_group() {
-        throw std::runtime_error("Groups are not implemented");
+        expect_char(U'(', "an opening parenthesis (`(`)");
+        auto la = lookahead_nonempty(
+            "a closing parenthesis (`)`), a character in a group or a group capture specification");
+
+        // Default-capture (by index) group.
+        if (la != U'?') {
+            auto inner = parse_regex();
+            expect_char(U')', "a closing parenthesis (`)`)");
+            return regex::part::Group(regex::capture::Index{}, std::move(inner));
+        }
+        expect_char(U'?', "a question mark beginning a group capture specification (`?`)");
+
+        constexpr auto expected_msg = "a group capture specification (the part after `?`)";
+        la = lookahead_nonempty(expected_msg);
+
+        // Uncaptured group.
+        if (la == U':') {
+            expect_char(U':', "a colon (`:`)");
+            auto inner = parse_regex();
+            expect_char(U')', "a closing parenthesis (`)`)");
+            return regex::part::Group(regex::capture::None{}, std::move(inner));
+        }
+
+        // Group captured by name.
+
+        // `(?P<name>contents)` or `(?<name>contents)` flavors.
+        if (la == U'P' || la == U'<') {
+            if (la == U'P') {
+                expect_char(U'P', "a capture group name marker (`P`)");
+            }
+            expect_char(U'<', "an opening delimiter for a capture group name (`<`)");
+            auto group_name = parse_group_name();
+            expect_char(U'>', "a closing delimiter for a capture group name (`>`)");
+            auto inner = parse_regex();
+            expect_char(U')', "a closing parenthesis (`)`)");
+            return regex::part::Group(regex::capture::Name{std::move(group_name)}, std::move(inner));
+        }
+
+        if (la == U'\'') {
+            expect_char(U'\'', "an opening delimiter for a capture group name (`'`)");
+            auto group_name = parse_group_name();
+            expect_char(U'\'', "a closing delimiter for a capture group name (`'`)");
+            auto inner = parse_regex();
+            expect_char(U')', "a closing parenthesis (`)`)");
+            return regex::part::Group(regex::capture::Name{std::move(group_name)}, std::move(inner));
+        }
+
+        throw errors::UnexpectedChar(m_pos, la, expected_msg);
+    }
+
+    /// Intermediate rule: parse a group name.
+    ///
+    /// @returns the UTF-8 encoded group name as an `std::string`.
+    std::string parse_group_name() {
+        throw std::runtime_error("Parsing group names is not yet implemented");
     }
 
 private:
@@ -153,6 +218,19 @@ private:
             return std::nullopt;
         }
         return *m_iter;
+    }
+
+    /// Peek the next character, without consuming it.
+    ///
+    /// @throws UnexpectedEnd if the end of input has been reached.
+    ///
+    /// @returns the next character from the input.
+    char32_t lookahead_nonempty(std::string_view expected) {
+        auto opt = lookahead();
+        if (!opt.has_value()) {
+            throw errors::UnexpectedEnd(m_pos, std::string(expected));
+        }
+        return opt.value();
     }
 
     /// Peek the next character, if any, and consume it.
@@ -168,6 +246,21 @@ private:
         return c;
     }
 
+    /// Peek the next character and verify that it is the same as expected.
+    ///
+    /// @throws errors::UnexpectedChar if the expectations are not met.
+    /// @throws errors::UnexpectedEnd if the end of input has been reached.
+    void expect_char(char32_t expected_char, std::string_view expected_msg) {
+        auto c_opt = next_char();
+        if (!c_opt.has_value()) {
+            throw errors::UnexpectedEnd(m_pos, std::string(expected_msg));
+        }
+        auto c = c_opt.value();
+        if (c != expected_char) {
+            throw errors::UnexpectedChar(m_pos, c, std::string(expected_msg));
+        }
+    }
+
     /// Discard several next characters from the input.
     ///
     /// @param num_skipped_chars the number of characters to discard.
@@ -176,10 +269,10 @@ private:
     ///
     /// @throws errors::UnexpectedEnd if the end of input has been reached before all requested
     /// characters have been discarded.
-    void advance(size_t num_skipped_chars, std::string expected) {
+    void advance(size_t num_skipped_chars, std::string_view expected) {
         for (size_t i = 0; i < num_skipped_chars; ++i) {
             if (m_iter == m_end) {
-                throw errors::UnexpectedEnd(m_pos, std::move(expected));
+                throw errors::UnexpectedEnd(m_pos, std::string(expected));
             }
             ++m_iter;
             ++m_pos;
@@ -190,12 +283,9 @@ private:
     ///
     /// Helper function.
     static bool can_start_atom(char32_t c) {
-        for (auto forbidden_char : std::basic_string_view(U"[](){}|?+*")) {
-            if (c == forbidden_char) {
-                return false;
-            }
-        }
-        return true;
+        auto forbidden_chars = std::basic_string_view(U"[](){}|?+*");
+        return std::find(forbidden_chars.begin(), forbidden_chars.end(), c)
+            == forbidden_chars.end();
     }
 
     /// Check if an atom can start with a given character.
@@ -205,6 +295,19 @@ private:
     /// `can_start_atom(char32_t)` returns `true` on this value.
     static bool can_start_atom(std::optional<char32_t> c) {
         return c.has_value() && can_start_atom(c.value());
+    }
+
+    /// Check if the provided character comes immediately past the end of a regex or a
+    /// top-level-like subexpression.
+    ///
+    /// Helper function. Returns `true` if the provided optional doesn't have a value because the
+    /// end of input ends a regex.
+    static bool ends_regex(std::optional<char32_t> c) {
+        if (!c.has_value()) {
+            return true;
+        }
+        auto chars = std::basic_string_view(U")|");
+        return std::find(chars.begin(), chars.end(), c) != chars.end();
     }
 
     /// The forward iterator at the current read position.
