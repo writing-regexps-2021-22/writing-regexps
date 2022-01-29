@@ -209,6 +209,7 @@ public:
                 std::move(inner));
         }
 
+        // `(?'name'contents)` flavor.
         if (la == U'\'') {
             expect_char(U'\'', "an opening delimiter for a capture group name (`'`)");
             auto group_name = parse_group_name();
