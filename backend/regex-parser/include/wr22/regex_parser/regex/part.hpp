@@ -99,7 +99,27 @@ namespace part {
         utils::Box<Part> inner;
     };
 
-    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group, Optional>;
+    /// A regex part specifying an "at least one" quantifier (`(expression)+`).
+    struct Plus {
+        /// Convenience constructor.
+        explicit Plus(Part inner);
+        bool operator==(const Plus& rhs) const = default;
+
+        /// The smart pointer to the subexpression under the quantifier.
+        utils::Box<Part> inner;
+    };
+
+    /// A regex part specifying an "at least zero" quantifier (`(expression)*`).
+    struct Star {
+        /// Convenience constructor.
+        explicit Star(Part inner);
+        bool operator==(const Star& rhs) const = default;
+
+        /// The smart pointer to the subexpression under the quantifier.
+        utils::Box<Part> inner;
+    };
+
+    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star>;
 }  // namespace part
 
 /// A part of a regular expression and its AST node type.

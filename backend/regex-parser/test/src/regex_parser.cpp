@@ -192,6 +192,8 @@ TEST_CASE("Groups with alternatives", "[regex]") {
 
 TEST_CASE("Quantifiers", "[regex]") {
     CHECK(parse_regex(UnicodeStringView("ц?")) == Part(part::Optional(part::Literal(U'ц'))));
+    CHECK(parse_regex(UnicodeStringView("ц+")) == Part(part::Plus(part::Literal(U'ц'))));
+    CHECK(parse_regex(UnicodeStringView("ц*")) == Part(part::Star(part::Literal(U'ц'))));
     CHECK(
         parse_regex(UnicodeStringView("()?"))
         == Part(part::Optional(part::Group(capture::Index(), part::Empty()))));
@@ -210,6 +212,21 @@ TEST_CASE("Quantifiers", "[regex]") {
         == Part(part::Alternatives(
             vec<Part>(part::Optional(part::Literal(U'a')), part::Optional(part::Literal(U'b'))))));
     CHECK(
+        parse_regex(UnicodeStringView("a+|b*"))
+        == Part(part::Alternatives(
+            vec<Part>(part::Plus(part::Literal(U'a')), part::Star(part::Literal(U'b'))))));
+    CHECK(
+        parse_regex(UnicodeStringView("(a*b+)?|bar*"))
+        == Part(part::Alternatives(vec<Part>(
+            part::Optional(part::Group(
+                capture::Index(),
+                part::Sequence(
+                    vec<Part>(part::Star(part::Literal(U'a')), part::Plus(part::Literal(U'b')))))),
+            part::Sequence(vec<Part>(
+                part::Literal(U'b'),
+                part::Literal(U'a'),
+                part::Star(part::Literal(U'r'))))))));
+    CHECK(
         parse_regex(UnicodeStringView("(?:a?)?"))
         == Part(part::Optional(part::Group(capture::None(), part::Optional(part::Literal(U'a'))))));
     CHECK(
@@ -225,20 +242,74 @@ TEST_CASE("Quantifiers", "[regex]") {
             return e.position() == 2 && e.char_got() == U'?';
         }));
     CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("a?++")),
+        ExpectedEnd,
+        Predicate<ExpectedEnd>([](const auto& e) {
+            // TODO: test the correct behavior for possessive quantifiers.
+            return e.position() == 2 && e.char_got() == U'+';
+        }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("i+++")),
+        ExpectedEnd,
+        Predicate<ExpectedEnd>([](const auto& e) {
+            // TODO: test the correct behavior for possessive quantifiers.
+            return e.position() == 2 && e.char_got() == U'+';
+        }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("i+*")),
+        ExpectedEnd,
+        Predicate<ExpectedEnd>(
+            [](const auto& e) { return e.position() == 2 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("i*?")),
+        ExpectedEnd,
+        Predicate<ExpectedEnd>(
+            [](const auto& e) { return e.position() == 2 && e.char_got() == U'?'; }));
+    CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("?")),
         UnexpectedChar,
         Predicate<UnexpectedChar>(
             [](const auto& e) { return e.position() == 0 && e.char_got() == U'?'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("*")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("+")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'+'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("(?)")),
         UnexpectedChar,
         Predicate<UnexpectedChar>(
             [](const auto& e) { return e.position() == 2 && e.char_got() == U')'; }));
     CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(*)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 1 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(+)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 1 && e.char_got() == U'+'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(++)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 1 && e.char_got() == U'+'; }));
+    CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("??")),
         UnexpectedChar,
         Predicate<UnexpectedChar>(
             [](const auto& e) { return e.position() == 0 && e.char_got() == U'?'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("*+")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
 }
 
 TEST_CASE("Sequences with groups", "[regex]") {

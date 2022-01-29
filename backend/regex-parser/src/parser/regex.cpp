@@ -154,6 +154,14 @@ public:
             expect_char(U'?', "a question mark denoting an optional quantifier (`?`)");
             return regex::part::Optional(std::move(result.value()));
         }
+        if (lookahead() == U'*') {
+            expect_char(U'*', "a question mark denoting an \"at least zero\" quantifier (`*`)");
+            return regex::part::Star(std::move(result.value()));
+        }
+        if (lookahead() == U'+') {
+            expect_char(U'+', "a question mark denoting an \"at least one\" quantifier (`+`)");
+            return regex::part::Plus(std::move(result.value()));
+        }
         return std::move(result.value());
     }
 

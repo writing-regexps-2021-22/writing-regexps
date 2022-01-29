@@ -22,6 +22,10 @@ part::Group::Group(Capture capture, Part inner)
 
 part::Optional::Optional(Part inner) : inner(utils::Box(std::move(inner))) {}
 
+part::Plus::Plus(Part inner) : inner(utils::Box(std::move(inner))) {}
+
+part::Star::Star(Part inner) : inner(utils::Box(std::move(inner))) {}
+
 std::ostream& operator<<(std::ostream& out, const Part& part) {
     part.visit(
         [&out](const part::Empty&) { out << "Empty"; },
@@ -59,7 +63,9 @@ std::ostream& operator<<(std::ostream& out, const Part& part) {
         [&out](const part::Group& part) {
             out << "Group { capture: " << part.capture << ", inner: " << *part.inner << " }";
         },
-        [&out](const part::Optional& part) { out << "Optional { " << *part.inner << " }"; });
+        [&out](const part::Optional& part) { out << "Optional { " << *part.inner << " }"; },
+        [&out](const part::Plus& part) { out << "Plus { " << *part.inner << " }"; },
+        [&out](const part::Star& part) { out << "Star { " << *part.inner << " }"; });
     return out;
 }
 
