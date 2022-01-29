@@ -29,6 +29,15 @@ namespace capture {
     using Adt = utils::Adt<None, Index, Name>;
 }  // namespace capture
 
+/// Group capture behavior.
+///
+/// A group can be captured by index (when one writes `(contents)`), by name (e.g.
+/// `(?<name>contents)` in some dialects) or not captured at all (`(?:contents)`). Objects of this
+/// type determine how exactly a certain group is going to be captured.
+//
+/// This is a variant type (see `Part` and  `utils::Adt` for a more detailed explanation of the
+/// concept). The variants for this class (explicitly or implicitly convertible to this type) are
+/// located in the `capture` namespace.
 class Capture : public capture::Adt {
 public:
     using capture::Adt::Adt;
