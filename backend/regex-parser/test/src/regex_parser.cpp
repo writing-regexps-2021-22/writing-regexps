@@ -134,8 +134,8 @@ TEST_CASE("Groups", "[regex]") {
             [](const auto& e) { return e.position() == 3 && e.char_got() == U')'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView(")")),
-        UnexpectedChar,
-        Predicate<UnexpectedChar>(
+        ExpectedEnd,
+        Predicate<ExpectedEnd>(
             [](const auto& e) { return e.position() == 0 && e.char_got() == U')'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("(?P'a')")),
@@ -156,7 +156,7 @@ TEST_CASE("Groups", "[regex]") {
         parse_regex(UnicodeStringView("(?>)")),
         UnexpectedChar,
         Predicate<UnexpectedChar>(
-            [](const auto& e) { return e.position() == 4 && e.char_got() == U')'; }));
+            [](const auto& e) { return e.position() == 2 && e.char_got() == U'>'; }));
 }
 
 TEST_CASE("Groups with alternatives", "[regex]") {
@@ -174,10 +174,13 @@ TEST_CASE("Groups with alternatives", "[regex]") {
             lit(U"aaa"),
             part::Group(
                 capture::None{},
-                part::Sequence{vec<Part>(
-                    part::Alternatives{vec<Part>(lit(U"ddd"), lit(U"bbb"))},
-                    part::Literal{U'z'},
-                    part::Literal{U'z'},
-                    part::Literal{U'z'})}),
-            lit(U"ccc"))}));
+                part::Alternatives{vec<Part>(
+                    part::Sequence{vec<Part>(
+                        part::Group(
+                            capture::Index{},
+                            part::Alternatives{vec<Part>(lit(U"ddd"), lit(U"bbb"))}),
+                        part::Literal{U'z'},
+                        part::Literal{U'z'},
+                        part::Literal{U'z'})},
+                    lit(U"ccc"))}))}));
 }

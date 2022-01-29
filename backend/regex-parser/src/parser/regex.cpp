@@ -1,4 +1,5 @@
 // wr22
+#include <boost/locale/utf.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
@@ -9,7 +10,19 @@
 #include <string>
 #include <vector>
 
+// boost
+#include <boost/locale/encoding_utf.hpp>
+
 namespace wr22::regex_parser::parser {
+
+namespace {
+    void push_utf8(std::string& buf, char32_t unicode_char) {
+        using Traits = boost::locale::utf::utf_traits<char>;
+        Traits::encode(
+            static_cast<boost::locale::utf::code_point>(unicode_char),
+            std::back_inserter(buf));
+    }
+}  // namespace
 
 /// A regex parser.
 ///
@@ -206,7 +219,23 @@ public:
     ///
     /// @returns the UTF-8 encoded group name as an `std::string`.
     std::string parse_group_name() {
-        throw std::runtime_error("Parsing group names is not yet implemented");
+        constexpr auto first_char_expected_msg = "the first character of a capture group name";
+        auto la = lookahead_nonempty(first_char_expected_msg);
+        if (!is_valid_for_group_name(la)) {
+            throw errors::UnexpectedChar(m_pos, la, first_char_expected_msg);
+        }
+
+        std::string group_name;
+        push_utf8(group_name, next_char().value());
+        while (true) {
+            constexpr auto next_char_expected_msg = "a character of a capture group name";
+            auto la = lookahead_nonempty(next_char_expected_msg);
+            if (!is_valid_for_group_name(la)) {
+                break;
+            }
+            push_utf8(group_name, next_char().value());
+        }
+        return group_name;
     }
 
 private:
@@ -253,11 +282,13 @@ private:
     void expect_char(char32_t expected_char, std::string_view expected_msg) {
         auto c_opt = next_char();
         if (!c_opt.has_value()) {
+            // m_pos not changed by `next_char()`.
             throw errors::UnexpectedEnd(m_pos, std::string(expected_msg));
         }
         auto c = c_opt.value();
         if (c != expected_char) {
-            throw errors::UnexpectedChar(m_pos, c, std::string(expected_msg));
+            // m_pos increased by `next_char()`, subtract 1 to adjust.
+            throw errors::UnexpectedChar(m_pos - 1, c, std::string(expected_msg));
         }
     }
 
@@ -308,6 +339,15 @@ private:
         }
         auto chars = std::basic_string_view(U")|");
         return std::find(chars.begin(), chars.end(), c) != chars.end();
+    }
+
+    /// Check if the provided character is valid for a capture group name.
+    ///
+    /// Helper function.
+    static bool is_valid_for_group_name(char32_t c) {
+        auto forbidden_chars = std::basic_string_view(U"'<>()[]{}|.+?*^$&");
+        return std::find(forbidden_chars.begin(), forbidden_chars.end(), c)
+            == forbidden_chars.end();
     }
 
     /// The forward iterator at the current read position.
