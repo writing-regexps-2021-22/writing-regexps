@@ -164,7 +164,7 @@ TEST_CASE("Groups", "[regex]") {
             [](const auto& e) { return e.position() == 2 && e.char_got() == U'>'; }));
 }
 
-TEST_CASE("Groups with alternatives", "[regex]") (
+TEST_CASE("Groups with alternatives", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("aaa|(bbb|ccc)"))
         == Part(part::Alternatives(vec<Part>(
@@ -188,4 +188,62 @@ TEST_CASE("Groups with alternatives", "[regex]") (
                         part::Literal(U'z'),
                         part::Literal(U'z'))),
                     lit(U"ccc"))))))));
+}
+
+TEST_CASE("Quantifiers", "[regex]") {
+    CHECK(parse_regex(UnicodeStringView("ц?")) == Part(part::Optional(part::Literal(U'ц'))));
+    CHECK(
+        parse_regex(UnicodeStringView("()?"))
+        == Part(part::Optional(part::Group(capture::Index(), part::Empty()))));
+    CHECK(
+        parse_regex(UnicodeStringView("abc?"))
+        == Part(part::Sequence(vec<Part>(
+            part::Literal(U'a'),
+            part::Literal(U'b'),
+            part::Optional(part::Literal(U'c'))))));
+    CHECK(
+        parse_regex(UnicodeStringView("a|b?"))
+        == Part(part::Alternatives(
+            vec<Part>(part::Literal(U'a'), part::Optional(part::Literal(U'b'))))));
+    CHECK(
+        parse_regex(UnicodeStringView("a?|b?"))
+        == Part(part::Alternatives(
+            vec<Part>(part::Optional(part::Literal(U'a')), part::Optional(part::Literal(U'b'))))));
+    CHECK(
+        parse_regex(UnicodeStringView("(?:a?)?"))
+        == Part(part::Optional(part::Group(capture::None(), part::Optional(part::Literal(U'a'))))));
+    CHECK(
+        parse_regex(UnicodeStringView("(a?)?"))
+        == Part(
+            part::Optional(part::Group(capture::Index(), part::Optional(part::Literal(U'a'))))));
+
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("a???")),
+        ExpectedEnd,
+        Predicate<ExpectedEnd>([](const auto& e) {
+            // TODO: test the correct behavior for lazy quantifiers.
+            return e.position() == 2 && e.char_got() == U'?';
+        }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("?")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'?'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("(?)")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 2 && e.char_got() == U')'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(UnicodeStringView("??")),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'?'; }));
+}
+
+TEST_CASE("Sequences with groups", "[regex]") {
+    CHECK(
+        parse_regex(UnicodeStringView("a(b)"))
+        == Part(part::Sequence(
+            vec<Part>(part::Literal(U'a'), part::Group(capture::Index(), part::Literal(U'b'))))));
 }

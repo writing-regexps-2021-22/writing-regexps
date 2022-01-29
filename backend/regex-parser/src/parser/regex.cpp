@@ -140,12 +140,21 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::Part parse_atom() {
-        auto la = lookahead();
+        std::optional<regex::Part> result;
+        auto la = lookahead_nonempty("an openning parenthesis (`(`) or a plain character");
         if (la == U'(') {
-            return parse_group();
+            result = parse_group();
         } else {
-            return parse_char_literal();
+            result = parse_char_literal();
         }
+
+        // Here come quantifiers.
+
+        if (lookahead() == U'?') {
+            expect_char(U'?', "a question mark denoting an optional quantifier (`?`)");
+            return regex::part::Optional(std::move(result.value()));
+        }
+        return std::move(result.value());
     }
 
     /// Intermediate rule: parse a character literal.
@@ -154,11 +163,8 @@ public:
     ///
     /// @throws errors::UnexpectedEnd if all characters from the input have already been consumed.
     regex::Part parse_char_literal() {
-        auto c = next_char();
-        if (!c.has_value()) {
-            throw errors::UnexpectedEnd(m_pos, "a character");
-        }
-        return regex::part::Literal(c.value());
+        auto c = next_char_validated(is_valid_for_char_literal, "a plain character");
+        return regex::part::Literal(c);
     }
 
     /// Intermediate rule: parse a parenthesized group (any capture variant).
@@ -284,21 +290,37 @@ private:
         return c;
     }
 
-    /// Peek the next character and verify that it is the same as expected.
+    /// Peek the next character, validate it and consume it.
     ///
-    /// @throws errors::UnexpectedChar if the expectations are not met.
-    /// @throws errors::UnexpectedEnd if the end of input has been reached.
-    void expect_char(char32_t expected_char, std::string_view expected_msg) {
+    /// @param predicate a function that takes the character from the input and returns `true` if it
+    /// is valid (expected) or `false` otherwise.
+    /// @param expected_msg a description of what kind of characters are expected.
+    ///
+    /// @throws UnexpectedChar if the validation fails.
+    /// @throws UnexpectedEnd if the end of input has been reached.
+    ///
+    /// @returns the next character from the input.
+    template <typename F>
+    char32_t next_char_validated(const F& predicate, std::string_view expected_msg) {
         auto c_opt = next_char();
         if (!c_opt.has_value()) {
             // m_pos not changed by `next_char()`.
             throw errors::UnexpectedEnd(m_pos, std::string(expected_msg));
         }
         auto c = c_opt.value();
-        if (c != expected_char) {
+        if (!predicate(c)) {
             // m_pos increased by `next_char()`, subtract 1 to adjust.
             throw errors::UnexpectedChar(m_pos - 1, c, std::string(expected_msg));
         }
+        return c;
+    }
+
+    /// Peek the next character and verify that it is the same as expected.
+    ///
+    /// @throws errors::UnexpectedChar if the expectations are not met.
+    /// @throws errors::UnexpectedEnd if the end of input has been reached.
+    void expect_char(char32_t expected_char, std::string_view expected_msg) {
+        next_char_validated([expected_char](auto c) { return c == expected_char; }, expected_msg);
     }
 
     /// Discard several next characters from the input.
@@ -323,9 +345,7 @@ private:
     ///
     /// Helper function.
     static bool can_start_atom(char32_t c) {
-        auto forbidden_chars = std::basic_string_view(U"[](){}|?+*");
-        return std::find(forbidden_chars.begin(), forbidden_chars.end(), c)
-            == forbidden_chars.end();
+        return c == '(' || is_valid_for_char_literal(c);
     }
 
     /// Check if an atom can start with a given character.
@@ -355,6 +375,15 @@ private:
     /// Helper function.
     static bool is_valid_for_group_name(char32_t c) {
         auto forbidden_chars = std::basic_string_view(U"'<>()[]{}|.+?*^$&");
+        return std::find(forbidden_chars.begin(), forbidden_chars.end(), c)
+            == forbidden_chars.end();
+    }
+
+    /// Check if the provided character is valid for a plain character literal.
+    ///
+    /// Helper function.
+    static bool is_valid_for_char_literal(char32_t c) {
+        auto forbidden_chars = std::basic_string_view(U"()[{|.+?*^$&\\");
         return std::find(forbidden_chars.begin(), forbidden_chars.end(), c)
             == forbidden_chars.end();
     }

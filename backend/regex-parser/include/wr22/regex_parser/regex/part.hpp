@@ -34,9 +34,9 @@ namespace part {
     /// three character literals: `f`, `o` and `o`.
     struct Literal {
         explicit Literal(char32_t character);
+        bool operator==(const Literal& rhs) const = default;
 
         char32_t character;
-        bool operator==(const Literal& rhs) const = default;
     };
 
     /// A regex part with the list of alternatives to be matched.
@@ -48,17 +48,11 @@ namespace part {
     /// As an example, `a|(b)|cde` would be represented as an `Alternatives` part with 3
     /// alternatives. The alternatives themselves are represented recursively as `Part`s.
     struct Alternatives {
-        /// Constructor.
-        ///
-        /// Takes the vector of alternatives by value. Since `Part` cannot be copied, usage of
-        /// copy-initialization or braced initializer list is not possible. Instead, either
-        /// construct the vector of alternatives directly (as an rvalue), or `std::move()` it into
-        /// the constructor argument.
         explicit Alternatives(std::vector<Part> alternatives);
+        bool operator==(const Alternatives& rhs) const = default;
 
         /// The list of the alternatives.
         std::vector<Part> alternatives;
-        bool operator==(const Alternatives& rhs) const = default;
     };
 
     /// A regex part with the list of items to be matched one after another.
@@ -67,17 +61,11 @@ namespace part {
     /// As an example, `a[b-e].` is a sequence of 3 subexpressions: `a`, `[b-e]` and `.`.
     /// As an another example, `ab` is a sequence of 2 subexpressions: `a` and `b`.
     struct Sequence {
-        /// Constructor.
-        ///
-        /// Takes the vector of items by value. Since `Part` cannot be copied, usage of
-        /// copy-initialization or braced initializer list is not possible. Instead, either
-        /// construct the vector of alternatives directly (as an rvalue), or `std::move()` it into
-        /// the constructor argument.
         explicit Sequence(std::vector<Part> items);
+        bool operator==(const Sequence& rhs) const = default;
 
         /// The list of the subexpressions.
         std::vector<Part> items;
-        bool operator==(const Sequence& rhs) const = default;
     };
 
     /// A regex part that represents a group in parentheses.
@@ -92,20 +80,26 @@ namespace part {
     /// regex groups and capturing.
     struct Group {
         /// Convenience constructor.
-        ///
-        /// Takes the inner regex part by value. Since `Part` cannot be copied, `std::move()`ing the
-        /// part into the constructor argument may be required.
         explicit Group(Capture capture, Part inner);
+        bool operator==(const Group& rhs) const = default;
 
         /// Capture behavior.
         Capture capture;
         /// The smart pointer to the group contents.
         utils::Box<Part> inner;
-
-        bool operator==(const Group& rhs) const = default;
     };
 
-    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group>;
+    /// A regex part specifying an optional quantifier (`(expression)?`).
+    struct Optional {
+        /// Convenience constructor.
+        explicit Optional(Part inner);
+        bool operator==(const Optional& rhs) const = default;
+
+        /// The smart pointer to the subexpression under the quantifier.
+        utils::Box<Part> inner;
+    };
+
+    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group, Optional>;
 }  // namespace part
 
 /// A part of a regular expression and its AST node type.
