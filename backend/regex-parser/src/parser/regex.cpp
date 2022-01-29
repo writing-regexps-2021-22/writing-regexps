@@ -192,7 +192,9 @@ public:
 
         // `(?P<name>contents)` or `(?<name>contents)` flavors.
         if (la == U'P' || la == U'<') {
+            bool has_p = false;
             if (la == U'P') {
+                has_p = true;
                 expect_char(U'P', "a capture group name marker (`P`)");
             }
             expect_char(U'<', "an opening delimiter for a capture group name (`<`)");
@@ -200,7 +202,11 @@ public:
             expect_char(U'>', "a closing delimiter for a capture group name (`>`)");
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(regex::capture::Name{std::move(group_name)}, std::move(inner));
+            auto flavor = has_p ? regex::NamedCaptureFlavor::AnglesWithP
+                                : regex::NamedCaptureFlavor::Angles;
+            return regex::part::Group(
+                regex::capture::Name{std::move(group_name), flavor},
+                std::move(inner));
         }
 
         if (la == U'\'') {
@@ -209,7 +215,9 @@ public:
             expect_char(U'\'', "a closing delimiter for a capture group name (`'`)");
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(regex::capture::Name{std::move(group_name)}, std::move(inner));
+            return regex::part::Group(
+                regex::capture::Name{std::move(group_name), regex::NamedCaptureFlavor::Apostrophes},
+                std::move(inner));
         }
 
         throw errors::UnexpectedChar(m_pos, la, expected_msg);

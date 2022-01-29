@@ -1,6 +1,7 @@
 #pragma once
 
 // wr22
+#include <wr22/regex_parser/regex/named_capture_flavor.hpp>
 #include <wr22/regex_parser/utils/adt.hpp>
 
 // stl
@@ -22,7 +23,7 @@ namespace capture {
 
     struct Name {
         std::string name;
-        // TODO: flavor.
+        NamedCaptureFlavor flavor;
         bool operator==(const Name& rhs) const = default;
     };
 

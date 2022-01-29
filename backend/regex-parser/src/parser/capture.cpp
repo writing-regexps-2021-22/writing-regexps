@@ -1,5 +1,6 @@
 // wr22
 #include <wr22/regex_parser/regex/capture.hpp>
+#include <wr22/regex_parser/regex/named_capture_flavor.hpp>
 
 // STL
 #include <iterator>
@@ -8,6 +9,10 @@
 // boost
 #include <boost/locale/utf.hpp>
 
+// fmt
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+
 namespace wr22::regex_parser::regex {
 
 std::ostream& operator<<(std::ostream& out, const Capture& capture) {
@@ -15,7 +20,11 @@ std::ostream& operator<<(std::ostream& out, const Capture& capture) {
         [&out](const capture::None&) { out << "None"; },
         [&out](const capture::Index&) { out << "Index"; },
         [&out](const capture::Name& capture) {
-            out << "Name(" << capture.name << ")";
+            fmt::format_to(
+                std::ostreambuf_iterator<char>(out),
+                "Name({}, {})",
+                capture.name,
+                capture.flavor);
         });
     return out;
 }

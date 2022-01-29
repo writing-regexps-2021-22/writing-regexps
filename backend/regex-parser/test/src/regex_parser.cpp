@@ -9,6 +9,7 @@
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_parser/regex/capture.hpp>
+#include <wr22/regex_parser/regex/named_capture_flavor.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
 #include <wr22/regex_parser/utils/utf8_string_view.hpp>
 
@@ -23,6 +24,7 @@ using wr22::regex_parser::parser::errors::ExpectedEnd;
 using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
 using wr22::regex_parser::regex::Capture;
+using wr22::regex_parser::regex::NamedCaptureFlavor;
 using wr22::regex_parser::regex::Part;
 using wr22::regex_parser::utils::UnicodeStringView;
 namespace part = wr22::regex_parser::regex::part;
@@ -93,19 +95,22 @@ TEST_CASE("Groups", "[regex]") {
         == Part(part::Group(capture::None{}, lit(U"foobar"))));
     CHECK(
         parse_regex(UnicodeStringView("(?<x>foobar)"))
-        == Part(part::Group(capture::Name{"x"}, lit(U"foobar"))));
+        == Part(part::Group(capture::Name{"x", NamedCaptureFlavor::Angles}, lit(U"foobar"))));
     CHECK(
         parse_regex(UnicodeStringView("(?<quux>12345)"))
-        == Part(part::Group(capture::Name{"quux"}, lit(U"12345"))));
+        == Part(part::Group(capture::Name{"quux", NamedCaptureFlavor::Angles}, lit(U"12345"))));
     CHECK(
         parse_regex(UnicodeStringView("(?'abc123'xyz)"))
-        == Part(part::Group(capture::Name{"abc123"}, lit(U"xyz"))));
+        == Part(
+            part::Group(capture::Name{"abc123", NamedCaptureFlavor::Apostrophes}, lit(U"xyz"))));
     CHECK(
         parse_regex(UnicodeStringView("(?P<name>group)"))
-        == Part(part::Group(capture::Name{"name"}, lit(U"group"))));
+        == Part(
+            part::Group(capture::Name{"name", NamedCaptureFlavor::AnglesWithP}, lit(U"group"))));
     CHECK(
         parse_regex(UnicodeStringView("(?P<тест>юникода)"))
-        == Part(part::Group(capture::Name{"тест"}, lit(U"юникода"))));
+        == Part(
+            part::Group(capture::Name{"тест", NamedCaptureFlavor::AnglesWithP}, lit(U"юникода"))));
     CHECK(
         parse_regex(UnicodeStringView("()")) == Part(part::Group(capture::Index{}, part::Empty{})));
     CHECK(
@@ -113,10 +118,10 @@ TEST_CASE("Groups", "[regex]") {
         == Part(part::Group(capture::None{}, part::Empty{})));
     CHECK(
         parse_regex(UnicodeStringView("(?'bb')"))
-        == Part(part::Group(capture::Name{"bb"}, part::Empty{})));
+        == Part(part::Group(capture::Name{"bb", NamedCaptureFlavor::Apostrophes}, part::Empty{})));
     CHECK(
         parse_regex(UnicodeStringView("(?P<ccc>)"))
-        == Part(part::Group(capture::Name{"ccc"}, part::Empty{})));
+        == Part(part::Group(capture::Name{"ccc", NamedCaptureFlavor::AnglesWithP}, part::Empty{})));
 
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("(a")),
