@@ -95,7 +95,7 @@ public:
             advance(1, "`|`");
             alternatives.push_back(parse_sequence_or_empty());
         }
-        return regex::part::Alternatives{std::move(alternatives)};
+        return regex::part::Alternatives(std::move(alternatives));
     }
 
     /// Intermediate rule: parse a sequence of atoms (e.g. `a(?:b)[c-e]`).
@@ -115,7 +115,7 @@ public:
         while (can_start_atom(lookahead())) {
             items.push_back(parse_atom());
         }
-        return regex::part::Sequence{std::move(items)};
+        return regex::part::Sequence(std::move(items));
     }
 
     /// Intermediate rule: parse a possibly empty sequence of atoms.
@@ -125,7 +125,7 @@ public:
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::Part parse_sequence_or_empty() {
         if (ends_regex(lookahead())) {
-            return regex::part::Empty{};
+            return regex::part::Empty();
         }
         return parse_sequence();
     }
@@ -158,7 +158,7 @@ public:
         if (!c.has_value()) {
             throw errors::UnexpectedEnd(m_pos, "a character");
         }
-        return regex::part::Literal{c.value()};
+        return regex::part::Literal(c.value());
     }
 
     /// Intermediate rule: parse a parenthesized group (any capture variant).
@@ -173,7 +173,7 @@ public:
         if (la != U'?') {
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(regex::capture::Index{}, std::move(inner));
+            return regex::part::Group(regex::capture::Index(), std::move(inner));
         }
         expect_char(U'?', "a question mark beginning a group capture specification (`?`)");
 
@@ -185,7 +185,7 @@ public:
             expect_char(U':', "a colon (`:`)");
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(regex::capture::None{}, std::move(inner));
+            return regex::part::Group(regex::capture::None(), std::move(inner));
         }
 
         // Group captured by name.
@@ -205,7 +205,7 @@ public:
             auto flavor = has_p ? regex::NamedCaptureFlavor::AnglesWithP
                                 : regex::NamedCaptureFlavor::Angles;
             return regex::part::Group(
-                regex::capture::Name{std::move(group_name), flavor},
+                regex::capture::Name(std::move(group_name), flavor),
                 std::move(inner));
         }
 
@@ -217,7 +217,7 @@ public:
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
             return regex::part::Group(
-                regex::capture::Name{std::move(group_name), regex::NamedCaptureFlavor::Apostrophes},
+                regex::capture::Name(std::move(group_name), regex::NamedCaptureFlavor::Apostrophes),
                 std::move(inner));
         }
 

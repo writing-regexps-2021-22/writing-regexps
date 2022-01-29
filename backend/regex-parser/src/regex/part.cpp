@@ -10,6 +10,13 @@
 
 namespace wr22::regex_parser::regex {
 
+part::Literal::Literal(char32_t character) : character(character) {}
+
+part::Alternatives::Alternatives(std::vector<Part> alternatives)
+    : alternatives(std::move(alternatives)) {}
+
+part::Sequence::Sequence(std::vector<Part> items) : items(std::move(items)) {}
+
 part::Group::Group(Capture capture, Part inner)
     : capture(std::move(capture)), inner(std::make_unique<Part>(std::move(inner))) {}
 

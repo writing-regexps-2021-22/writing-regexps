@@ -35,16 +35,16 @@ Part lit(const std::u32string_view& str) {
     std::vector<Part> chars;
     chars.reserve(str.size());
     for (auto c : str) {
-        chars.push_back(part::Literal{c});
+        chars.push_back(part::Literal(c));
     }
-    return part::Sequence{std::move(chars)};
+    return part::Sequence(std::move(chars));
 }
 }  // namespace
 
 TEST_CASE("Basics", "[regex]") {
     CHECK(parse_regex(UnicodeStringView("foo")) == Part(lit(U"foo")));
-    CHECK(parse_regex(UnicodeStringView("x")) == Part(part::Literal{U'x'}));
-    CHECK(parse_regex(UnicodeStringView("")) == Part(part::Empty{}));
+    CHECK(parse_regex(UnicodeStringView("x")) == Part(part::Literal(U'x')));
+    CHECK(parse_regex(UnicodeStringView("")) == Part(part::Empty()));
     CHECK(parse_regex(UnicodeStringView("тест юникода")) == Part(lit(U"тест юникода")));
     CHECK(parse_regex(UnicodeStringView("\t  whitespace   ")) == Part(lit(U"\t  whitespace   ")));
 }
@@ -52,76 +52,76 @@ TEST_CASE("Basics", "[regex]") {
 TEST_CASE("Alternatives", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("foo|bar"))
-        == Part(part::Alternatives{vec<Part>(lit(U"foo"), lit(U"bar"))}));
+        == Part(part::Alternatives(vec<Part>(lit(U"foo"), lit(U"bar")))));
     CHECK(
         parse_regex(UnicodeStringView("foo|x"))
-        == Part(part::Alternatives{vec<Part>(lit(U"foo"), part::Literal{U'x'})}));
+        == Part(part::Alternatives(vec<Part>(lit(U"foo"), part::Literal(U'x')))));
     CHECK(
         parse_regex(UnicodeStringView("a|b|c|test|d|e"))
-        == Part(part::Alternatives{vec<Part>(
-            part::Literal{U'a'},
-            part::Literal{U'b'},
-            part::Literal{U'c'},
+        == Part(part::Alternatives(vec<Part>(
+            part::Literal(U'a'),
+            part::Literal(U'b'),
+            part::Literal(U'c'),
             lit(U"test"),
-            part::Literal{U'd'},
-            part::Literal{U'e'})}));
+            part::Literal(U'd'),
+            part::Literal(U'e')))));
     CHECK(
         parse_regex(UnicodeStringView("a||b"))
-        == Part(part::Alternatives{
-            vec<Part>(part::Literal{U'a'}, part::Empty{}, part::Literal{U'b'})}));
+        == Part(part::Alternatives(
+            vec<Part>(part::Literal(U'a'), part::Empty(), part::Literal(U'b')))));
     CHECK(
         parse_regex(UnicodeStringView("a|b|"))
-        == Part(part::Alternatives{
-            vec<Part>(part::Literal{U'a'}, part::Literal{U'b'}, part::Empty{})}));
+        == Part(part::Alternatives(
+            vec<Part>(part::Literal(U'a'), part::Literal(U'b'), part::Empty()))));
     CHECK(
         parse_regex(UnicodeStringView("|a|b"))
-        == Part(part::Alternatives{
-            vec<Part>(part::Empty{}, part::Literal{U'a'}, part::Literal{U'b'})}));
+        == Part(part::Alternatives(
+            vec<Part>(part::Empty(), part::Literal(U'a'), part::Literal(U'b')))));
     CHECK(
         parse_regex(UnicodeStringView("|"))
-        == Part(part::Alternatives{vec<Part>(part::Empty{}, part::Empty{})}));
+        == Part(part::Alternatives(vec<Part>(part::Empty(), part::Empty()))));
     CHECK(
         parse_regex(UnicodeStringView("|||"))
-        == Part(part::Alternatives{
-            vec<Part>(part::Empty{}, part::Empty{}, part::Empty{}, part::Empty{})}));
+        == Part(part::Alternatives(
+            vec<Part>(part::Empty(), part::Empty(), part::Empty(), part::Empty()))));
 }
 
 TEST_CASE("Groups", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("(aaa)"))
-        == Part(part::Group(capture::Index{}, lit(U"aaa"))));
+        == Part(part::Group(capture::Index(), lit(U"aaa"))));
     CHECK(
         parse_regex(UnicodeStringView("(?:foobar)"))
-        == Part(part::Group(capture::None{}, lit(U"foobar"))));
+        == Part(part::Group(capture::None(), lit(U"foobar"))));
     CHECK(
         parse_regex(UnicodeStringView("(?<x>foobar)"))
-        == Part(part::Group(capture::Name{"x", NamedCaptureFlavor::Angles}, lit(U"foobar"))));
+        == Part(part::Group(capture::Name("x", NamedCaptureFlavor::Angles), lit(U"foobar"))));
     CHECK(
         parse_regex(UnicodeStringView("(?<quux>12345)"))
-        == Part(part::Group(capture::Name{"quux", NamedCaptureFlavor::Angles}, lit(U"12345"))));
+        == Part(part::Group(capture::Name("quux", NamedCaptureFlavor::Angles), lit(U"12345"))));
     CHECK(
         parse_regex(UnicodeStringView("(?'abc123'xyz)"))
         == Part(
-            part::Group(capture::Name{"abc123", NamedCaptureFlavor::Apostrophes}, lit(U"xyz"))));
+            part::Group(capture::Name("abc123", NamedCaptureFlavor::Apostrophes), lit(U"xyz"))));
     CHECK(
         parse_regex(UnicodeStringView("(?P<name>group)"))
         == Part(
-            part::Group(capture::Name{"name", NamedCaptureFlavor::AnglesWithP}, lit(U"group"))));
+            part::Group(capture::Name("name", NamedCaptureFlavor::AnglesWithP), lit(U"group"))));
     CHECK(
         parse_regex(UnicodeStringView("(?P<тест>юникода)"))
         == Part(
-            part::Group(capture::Name{"тест", NamedCaptureFlavor::AnglesWithP}, lit(U"юникода"))));
+            part::Group(capture::Name("тест", NamedCaptureFlavor::AnglesWithP), lit(U"юникода"))));
     CHECK(
-        parse_regex(UnicodeStringView("()")) == Part(part::Group(capture::Index{}, part::Empty{})));
+        parse_regex(UnicodeStringView("()")) == Part(part::Group(capture::Index(), part::Empty())));
     CHECK(
         parse_regex(UnicodeStringView("(?:)"))
-        == Part(part::Group(capture::None{}, part::Empty{})));
+        == Part(part::Group(capture::None(), part::Empty())));
     CHECK(
         parse_regex(UnicodeStringView("(?'bb')"))
-        == Part(part::Group(capture::Name{"bb", NamedCaptureFlavor::Apostrophes}, part::Empty{})));
+        == Part(part::Group(capture::Name("bb", NamedCaptureFlavor::Apostrophes), part::Empty())));
     CHECK(
         parse_regex(UnicodeStringView("(?P<ccc>)"))
-        == Part(part::Group(capture::Name{"ccc", NamedCaptureFlavor::AnglesWithP}, part::Empty{})));
+        == Part(part::Group(capture::Name("ccc", NamedCaptureFlavor::AnglesWithP), part::Empty())));
 
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("(a")),
@@ -164,28 +164,28 @@ TEST_CASE("Groups", "[regex]") {
             [](const auto& e) { return e.position() == 2 && e.char_got() == U'>'; }));
 }
 
-TEST_CASE("Groups with alternatives", "[regex]") {
+TEST_CASE("Groups with alternatives", "[regex]") (
     CHECK(
         parse_regex(UnicodeStringView("aaa|(bbb|ccc)"))
-        == Part(part::Alternatives{vec<Part>(
+        == Part(part::Alternatives(vec<Part>(
             lit(U"aaa"),
             part::Group(
-                capture::Index{},
-                part::Alternatives{vec<Part>(lit(U"bbb"), lit(U"ccc"))}))}));
+                capture::Index(),
+                part::Alternatives(vec<Part>(lit(U"bbb"), lit(U"ccc"))))))));
 
     CHECK(
         parse_regex(UnicodeStringView("aaa|(?:(ddd|bbb)zzz|ccc)"))
-        == Part(part::Alternatives{vec<Part>(
+        == Part(part::Alternatives(vec<Part>(
             lit(U"aaa"),
             part::Group(
-                capture::None{},
-                part::Alternatives{vec<Part>(
-                    part::Sequence{vec<Part>(
+                capture::None(),
+                part::Alternatives(vec<Part>(
+                    part::Sequence(vec<Part>(
                         part::Group(
-                            capture::Index{},
-                            part::Alternatives{vec<Part>(lit(U"ddd"), lit(U"bbb"))}),
-                        part::Literal{U'z'},
-                        part::Literal{U'z'},
-                        part::Literal{U'z'})},
-                    lit(U"ccc"))}))}));
+                            capture::Index(),
+                            part::Alternatives(vec<Part>(lit(U"ddd"), lit(U"bbb")))),
+                        part::Literal(U'z'),
+                        part::Literal(U'z'),
+                        part::Literal(U'z'))),
+                    lit(U"ccc"))))))));
 }

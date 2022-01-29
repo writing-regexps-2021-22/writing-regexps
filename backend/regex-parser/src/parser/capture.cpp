@@ -15,6 +15,9 @@
 
 namespace wr22::regex_parser::regex {
 
+capture::Name::Name(std::string name, NamedCaptureFlavor flavor)
+    : name(std::move(name)), flavor(flavor) {}
+
 std::ostream& operator<<(std::ostream& out, const Capture& capture) {
     capture.visit(
         [&out](const capture::None&) { out << "None"; },

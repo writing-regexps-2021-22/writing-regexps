@@ -13,15 +13,25 @@ namespace wr22::regex_parser::regex {
 class Capture;
 
 namespace capture {
+    /// Denotes an non-capturing group.
     struct None {
+        explicit None() = default;
         bool operator==(const None& rhs) const = default;
     };
 
+    /// Denotes a group captured by index.
     struct Index {
+        explicit Index() = default;
         bool operator==(const Index& rhs) const = default;
     };
 
+    /// Denotes a group captured by name.
+    ///
+    /// A specific name and the syntax variant for this name's specification (see
+    /// `NamedCaptureFlavor`) are stored.
     struct Name {
+        explicit Name(std::string name, NamedCaptureFlavor flavor);
+
         std::string name;
         NamedCaptureFlavor flavor;
         bool operator==(const Name& rhs) const = default;

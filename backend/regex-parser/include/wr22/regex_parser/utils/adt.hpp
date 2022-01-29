@@ -12,6 +12,7 @@ namespace detail::adt {
     template <typename... Fs>
     struct MultiCallable : public Fs... {
         MultiCallable(Fs&&... fs) : Fs(fs)... {}
+        using Fs::operator()...;
     };
 }  // namespace detail::adt
 

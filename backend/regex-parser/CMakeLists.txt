@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 project(wr22-regex-parser CXX)
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(REGEX_PARSER_BUILD_TESTS ON "Build tests for regex-parser")
 
@@ -12,6 +13,7 @@ target_compile_options(
     PUBLIC
         -Werror=return-type
         -Werror=switch
+        -pedantic
 )
 target_link_libraries(
     wr22-regex-parser

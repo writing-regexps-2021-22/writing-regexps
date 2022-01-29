@@ -23,6 +23,7 @@ namespace part {
     /// Corresponds to an empty regular expression (`""`) or the contents of an empty parenthesized
     /// group (`"()"`).
     struct Empty {
+        explicit Empty() = default;
         bool operator==(const Empty& rhs) const = default;
     };
 
@@ -31,6 +32,8 @@ namespace part {
     /// Corresponds to a plain character in a regular expression. E.g. the regex `"foo"` contains
     /// three character literals: `f`, `o` and `o`.
     struct Literal {
+        explicit Literal(char32_t character);
+
         char32_t character;
         bool operator==(const Literal& rhs) const = default;
     };
@@ -44,6 +47,14 @@ namespace part {
     /// As an example, `a|(b)|cde` would be represented as an `Alternatives` part with 3
     /// alternatives. The alternatives themselves are represented recursively as `Part`s.
     struct Alternatives {
+        /// Constructor.
+        ///
+        /// Takes the vector of alternatives by value. Since `Part` cannot be copied, usage of
+        /// copy-initialization or braced initializer list is not possible. Instead, either
+        /// construct the vector of alternatives directly (as an rvalue), or `std::move()` it into
+        /// the constructor argument.
+        explicit Alternatives(std::vector<Part> alternatives);
+
         /// The list of the alternatives.
         std::vector<Part> alternatives;
         bool operator==(const Alternatives& rhs) const = default;
@@ -55,6 +66,14 @@ namespace part {
     /// As an example, `a[b-e].` is a sequence of 3 subexpressions: `a`, `[b-e]` and `.`.
     /// As an another example, `ab` is a sequence of 2 subexpressions: `a` and `b`.
     struct Sequence {
+        /// Constructor.
+        ///
+        /// Takes the vector of items by value. Since `Part` cannot be copied, usage of
+        /// copy-initialization or braced initializer list is not possible. Instead, either
+        /// construct the vector of alternatives directly (as an rvalue), or `std::move()` it into
+        /// the constructor argument.
+        explicit Sequence(std::vector<Part> items);
+
         /// The list of the subexpressions.
         std::vector<Part> items;
         bool operator==(const Sequence& rhs) const = default;
@@ -72,7 +91,10 @@ namespace part {
     /// regex groups and capturing.
     struct Group {
         /// Convenience constructor.
-        Group(Capture capture, Part inner);
+        ///
+        /// Takes the inner regex part by value. Since `Part` cannot be copied, `std::move()`ing the
+        /// part into the constructor argument may be required.
+        explicit Group(Capture capture, Part inner);
 
         /// Capture behavior.
         Capture capture;
