@@ -3,6 +3,7 @@
 // wr22
 #include <wr22/regex_parser/regex/capture.hpp>
 #include <wr22/regex_parser/utils/adt.hpp>
+#include <wr22/regex_parser/utils/box.hpp>
 
 // stl
 #include <iosfwd>
@@ -98,9 +99,10 @@ namespace part {
 
         /// Capture behavior.
         Capture capture;
-        /// The (smart) pointer to the group contents.
-        std::unique_ptr<Part> inner;
-        bool operator==(const Group& rhs) const;
+        /// The smart pointer to the group contents.
+        utils::Box<Part> inner;
+
+        bool operator==(const Group& rhs) const = default;
     };
 
     using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group>;

@@ -18,11 +18,7 @@ part::Alternatives::Alternatives(std::vector<Part> alternatives)
 part::Sequence::Sequence(std::vector<Part> items) : items(std::move(items)) {}
 
 part::Group::Group(Capture capture, Part inner)
-    : capture(std::move(capture)), inner(std::make_unique<Part>(std::move(inner))) {}
-
-bool part::Group::operator==(const part::Group& rhs) const {
-    return capture == rhs.capture && *inner == *rhs.inner;
-}
+    : capture(std::move(capture)), inner(utils::Box(std::move(inner))) {}
 
 std::ostream& operator<<(std::ostream& out, const Part& part) {
     part.visit(
