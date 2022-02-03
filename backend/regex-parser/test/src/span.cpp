@@ -11,6 +11,25 @@
 using wr22::regex_parser::span::InvalidSpan;
 using wr22::regex_parser::span::Span;
 
+TEST_CASE("Span::make_empty works", "[span]") {
+    {
+        auto span = Span::make_empty(0);
+        CHECK(span.begin() == 0);
+        CHECK(span.end() == 0);
+    }
+    {
+        auto span = Span::make_empty(100);
+        CHECK(span.begin() == 100);
+        CHECK(span.end() == 100);
+    }
+    auto max = std::numeric_limits<size_t>::max();
+    {
+        auto span = Span::make_empty(max);
+        CHECK(span.begin() == max);
+        CHECK(span.end() == max);
+    }
+}
+
 TEST_CASE("Span::make_single_position works", "[span]") {
     {
         auto span = Span::make_single_position(3);
@@ -53,10 +72,21 @@ TEST_CASE("Span::make_from_positions works", "[span]") {
         CHECK(span.begin() == 98764);
         CHECK(span.end() == 98765);
     }
-    CHECK_THROWS_AS(Span::make_from_positions(0, 0), InvalidSpan);
-    CHECK_THROWS_AS(Span::make_from_positions(12345, 12345), InvalidSpan);
-    CHECK_THROWS_AS(Span::make_from_positions(12345, 12344), InvalidSpan);
-    CHECK_THROWS_AS(Span::make_from_positions(98765, 98765), InvalidSpan);
+    {
+        auto span = Span::make_from_positions(0, 0);
+        CHECK(span.begin() == 0);
+        CHECK(span.end() == 0);
+    }
+    {
+        auto span = Span::make_from_positions(12345, 12345);
+        CHECK(span.begin() == 12345);
+        CHECK(span.end() == 12345);
+    }
+    {
+        auto span = Span::make_from_positions(98765, 98765);
+        CHECK(span.begin() == 98765);
+        CHECK(span.end() == 98765);
+    }
     CHECK_THROWS_AS(Span::make_from_positions(98765, 98065), InvalidSpan);
     CHECK_THROWS_AS(Span::make_from_positions(98765, 0), InvalidSpan);
 }
@@ -77,6 +107,16 @@ TEST_CASE("Span::make_with_length works", "[span]") {
         CHECK(span.begin() == 17);
         CHECK(span.end() == 22);
     }
+    {
+        auto span = Span::make_with_length(0, 0);
+        CHECK(span.begin() == 0);
+        CHECK(span.end() == 0);
+    }
+    {
+        auto span = Span::make_with_length(17, 0);
+        CHECK(span.begin() == 17);
+        CHECK(span.end() == 0);
+    }
 
     auto max = std::numeric_limits<size_t>::max();
     {
@@ -89,7 +129,6 @@ TEST_CASE("Span::make_with_length works", "[span]") {
         CHECK(span.begin() == 1000);
         CHECK(span.end() == max);
     }
-    CHECK_THROWS_AS(Span::make_with_length(0, 0), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(888, 0), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(1, max), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(max, 1), InvalidSpan);
@@ -100,16 +139,22 @@ TEST_CASE("Span::make_with_length works", "[span]") {
 }
 
 TEST_CASE("Span::length works", "[span]") {
+    CHECK(Span::make_empty(0).length() == 0);
+    CHECK(Span::make_empty(5).length() == 0);
+    CHECK(Span::make_empty(1000).length() == 0);
     CHECK(Span::make_single_position(3).length() == 1);
     CHECK(Span::make_single_position(100).length() == 1);
     CHECK(Span::make_from_positions(3, 8).length() == 5);
     CHECK(Span::make_from_positions(111, 112).length() == 1);
     CHECK(Span::make_from_positions(111, 115).length() == 4);
+    CHECK(Span::make_from_positions(115, 115).length() == 0);
     CHECK(Span::make_with_length(0, 115).length() == 115);
+    CHECK(Span::make_with_length(115, 0).length() == 0);
     CHECK(Span::make_with_length(120, 115).length() == 115);
     CHECK(Span::make_with_length(120, 1).length() == 1);
 
     auto max = std::numeric_limits<size_t>::max();
+    CHECK(Span::make_empty(max).length() == 0);
     CHECK(Span::make_from_positions(111, max).length() == max - 111);
     CHECK(Span::make_from_positions(0, max).length() == max);
     CHECK(Span::make_with_length(max - 5, 2).length() == 2);

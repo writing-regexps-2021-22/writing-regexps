@@ -15,6 +15,8 @@
 
 namespace wr22::regex_parser::parser {
 
+using span::Span;
+
 namespace {
     void push_utf8(std::string& buf, char32_t unicode_char) {
         using Traits = boost::locale::utf::utf_traits<char>;
@@ -64,10 +66,10 @@ public:
     /// not consume all of the parser's input. Hence, if a whole regex is to be parsed,
     /// the `expect_end` method should be called afterwards.
     ///
-    /// @returns the parsed regex AST (some variant of `regex::Part` depending on the input).
+    /// @returns the parsed regex AST (some variant of `regex::SpannedPart` depending on the input).
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
-    regex::Part parse_regex() {
+    regex::SpannedPart parse_regex() {
         // Empty regexes are handled as empty sequences.
         return parse_alternatives();
     }
@@ -78,7 +80,9 @@ public:
     /// only if the list of alternatives contains exactly 1 element, the only alternative unchanged.
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
-    regex::Part parse_alternatives() {
+    regex::SpannedPart parse_alternatives() {
+        auto begin = track_pos();
+
         auto part = parse_sequence_or_empty();
         // Either this is the only alternative (in which case we flatten the AST and return the only
         // alternative itself)...
@@ -89,13 +93,13 @@ public:
         // ... or we will be constructing a vector of alternatives.
         // Note: we cannot use an initializer list, because this would
         // entail copying `part`, whose copy constructor is deleted.
-        std::vector<regex::Part> alternatives;
+        std::vector<regex::SpannedPart> alternatives;
         alternatives.push_back(std::move(part));
         while (lookahead() == U'|') {
             advance(1, "`|`");
             alternatives.push_back(parse_sequence_or_empty());
         }
-        return regex::part::Alternatives(std::move(alternatives));
+        return make_spanned(begin, regex::part::Alternatives(std::move(alternatives)));
     }
 
     /// Intermediate rule: parse a sequence of atoms (e.g. `a(?:b)[c-e]`).
@@ -104,18 +108,20 @@ public:
     /// this list of contains exactly 1 element, the only atom unchanged.
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
-    regex::Part parse_sequence() {
+    regex::SpannedPart parse_sequence() {
+        auto begin = track_pos();
+
         auto part = parse_atom();
         if (!can_start_atom(lookahead())) {
             return part;
         }
 
-        std::vector<regex::Part> items;
+        std::vector<regex::SpannedPart> items;
         items.push_back(std::move(part));
         while (can_start_atom(lookahead())) {
             items.push_back(parse_atom());
         }
-        return regex::part::Sequence(std::move(items));
+        return make_spanned(begin, regex::part::Sequence(std::move(items)));
     }
 
     /// Intermediate rule: parse a possibly empty sequence of atoms.
@@ -123,9 +129,10 @@ public:
     /// @returns `regex::part::Empty` if the sequence is empty, or calls `parse_sequence` otherwise.
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
-    regex::Part parse_sequence_or_empty() {
+    regex::SpannedPart parse_sequence_or_empty() {
+        auto begin = track_pos();
         if (ends_regex(lookahead())) {
-            return regex::part::Empty();
+            return make_spanned(begin, regex::part::Empty());
         }
         return parse_sequence();
     }
@@ -136,11 +143,12 @@ public:
     /// plain characters in a regex) and parenthesized groups. As the project development goes on,
     /// new kinds of atoms will be added.
     ///
-    /// @returns the parsed atom (some variant of `regex::Part` depending on the atom kind).
+    /// @returns the parsed atom (some variant of `regex::SpannedPart` depending on the atom kind).
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
-    regex::Part parse_atom() {
-        std::optional<regex::Part> result;
+    regex::SpannedPart parse_atom() {
+        auto begin = track_pos();
+        std::optional<regex::SpannedPart> result;
         auto la = lookahead_nonempty("an openning parenthesis (`(`) or a plain character");
         if (la == U'(') {
             result = parse_group();
@@ -152,15 +160,15 @@ public:
 
         if (lookahead() == U'?') {
             expect_char(U'?', "a question mark denoting an optional quantifier (`?`)");
-            return regex::part::Optional(std::move(result.value()));
+            return make_spanned(begin, regex::part::Optional(std::move(result.value())));
         }
         if (lookahead() == U'*') {
             expect_char(U'*', "a question mark denoting an \"at least zero\" quantifier (`*`)");
-            return regex::part::Star(std::move(result.value()));
+            return make_spanned(begin, regex::part::Star(std::move(result.value())));
         }
         if (lookahead() == U'+') {
             expect_char(U'+', "a question mark denoting an \"at least one\" quantifier (`+`)");
-            return regex::part::Plus(std::move(result.value()));
+            return make_spanned(begin, regex::part::Plus(std::move(result.value())));
         }
         return std::move(result.value());
     }
@@ -170,15 +178,18 @@ public:
     /// @returns the parsed character literal (`regex::part::Literal`).
     ///
     /// @throws errors::UnexpectedEnd if all characters from the input have already been consumed.
-    regex::Part parse_char_literal() {
+    regex::SpannedPart parse_char_literal() {
+        auto position = m_pos;
         auto c = next_char_validated(is_valid_for_char_literal, "a plain character");
-        return regex::part::Literal(c);
+        return regex::SpannedPart(regex::part::Literal(c), Span::make_single_position(position));
     }
 
     /// Intermediate rule: parse a parenthesized group (any capture variant).
     ///
     /// @returns the parsed group (`regex::part::Group`).
-    regex::Part parse_group() {
+    regex::SpannedPart parse_group() {
+        auto begin = track_pos();
+
         expect_char(U'(', "an opening parenthesis (`(`)");
         auto la = lookahead_nonempty(
             "a closing parenthesis (`)`), a character in a group or a group capture specification");
@@ -187,7 +198,9 @@ public:
         if (la != U'?') {
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(regex::capture::Index(), std::move(inner));
+            return make_spanned(
+                begin,
+                regex::part::Group(regex::capture::Index(), std::move(inner)));
         }
         expect_char(U'?', "a question mark beginning a group capture specification (`?`)");
 
@@ -199,7 +212,7 @@ public:
             expect_char(U':', "a colon (`:`)");
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(regex::capture::None(), std::move(inner));
+            return make_spanned(begin, regex::part::Group(regex::capture::None(), std::move(inner)));
         }
 
         // Group captured by name.
@@ -212,27 +225,33 @@ public:
                 expect_char(U'P', "a capture group name marker (`P`)");
             }
             expect_char(U'<', "an opening delimiter for a capture group name (`<`)");
-            auto group_name = parse_group_name();
+            auto&& [group_name, group_name_span] = parse_group_name();
             expect_char(U'>', "a closing delimiter for a capture group name (`>`)");
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
             auto flavor = has_p ? regex::NamedCaptureFlavor::AnglesWithP
                                 : regex::NamedCaptureFlavor::Angles;
-            return regex::part::Group(
-                regex::capture::Name(std::move(group_name), flavor),
-                std::move(inner));
+            return make_spanned(
+                begin,
+                regex::part::Group(
+                    regex::capture::Name(std::move(group_name), flavor),
+                    std::move(inner)));
         }
 
         // `(?'name'contents)` flavor.
         if (la == U'\'') {
             expect_char(U'\'', "an opening delimiter for a capture group name (`'`)");
-            auto group_name = parse_group_name();
+            auto&& [group_name, group_name_span] = parse_group_name();
             expect_char(U'\'', "a closing delimiter for a capture group name (`'`)");
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)");
-            return regex::part::Group(
-                regex::capture::Name(std::move(group_name), regex::NamedCaptureFlavor::Apostrophes),
-                std::move(inner));
+            return make_spanned(
+                begin,
+                regex::part::Group(
+                    regex::capture::Name(
+                        std::move(group_name),
+                        regex::NamedCaptureFlavor::Apostrophes),
+                    std::move(inner)));
         }
 
         throw errors::UnexpectedChar(m_pos, la, expected_msg);
@@ -241,7 +260,9 @@ public:
     /// Intermediate rule: parse a group name.
     ///
     /// @returns the UTF-8 encoded group name as an `std::string`.
-    std::string parse_group_name() {
+    std::pair<std::string, Span> parse_group_name() {
+        auto begin_pos = m_pos;
+
         constexpr auto first_char_expected_msg = "the first character of a capture group name";
         auto la = lookahead_nonempty(first_char_expected_msg);
         if (!is_valid_for_group_name(la)) {
@@ -258,7 +279,9 @@ public:
             }
             push_utf8(group_name, next_char().value());
         }
-        return group_name;
+
+        auto end_pos = m_pos;
+        return std::make_pair(std::move(group_name), Span::make_from_positions(begin_pos, end_pos));
     }
 
 private:
@@ -396,6 +419,26 @@ private:
             == forbidden_chars.end();
     }
 
+    /// A newtype wrapper around the input position (point, not range).
+    struct PositionTracker {
+        size_t position;
+    };
+
+    /// Remember the `begin` position to construct a range position later.
+    ///
+    /// Helper method.
+    PositionTracker track_pos() const {
+        return PositionTracker{m_pos};
+    }
+
+    /// Wrap a `Part` into a `SpannedPart` based on the information remembered.
+    ///
+    /// Helper method.
+    regex::SpannedPart make_spanned(PositionTracker position_tracker, regex::Part part) const {
+        auto span = Span::make_from_positions(position_tracker.position, m_pos);
+        return regex::SpannedPart(std::move(part), span);
+    }
+
     /// The forward iterator at the current read position.
     Iter m_iter;
     /// The end iterator.
@@ -408,7 +451,7 @@ private:
 template <typename Iter, typename Sentinel>
 Parser(Iter begin, Sentinel end) -> Parser<Iter, Sentinel>;
 
-regex::Part parse_regex(const utils::UnicodeStringView& regex) {
+regex::SpannedPart parse_regex(const utils::UnicodeStringView& regex) {
     auto parser = Parser(regex.begin(), regex.end());
     auto result = parser.parse_regex();
     parser.expect_end();

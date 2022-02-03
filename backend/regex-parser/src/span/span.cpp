@@ -9,7 +9,7 @@ namespace wr22::regex_parser::span {
 
 InvalidSpan::InvalidSpan(size_t begin, size_t end)
     : std::runtime_error(fmt::format(
-        "The span with begin = {} and end = {} is invalid because end <= begin",
+        "The span with begin = {} and end = {} is invalid because end < begin",
         begin,
         end)),
       begin(begin), end(end) {}
@@ -39,7 +39,7 @@ size_t Span::end() const {
 }
 
 Span::Span(size_t begin, size_t end) : m_begin(begin), m_end(end) {
-    if (end <= begin) {
+    if (end < begin) {
         throw InvalidSpan(begin, end);
     }
 }

@@ -6,7 +6,7 @@
 
 namespace wr22::regex_parser::span {
 
-/// The exception thrown on an attempt to construct an empty or otherwise invalid span.
+/// The exception thrown on an attempt to construct an invalid span.
 ///
 /// See the documentation for `Span` for additional information.
 struct InvalidSpan : public std::runtime_error {
@@ -25,10 +25,15 @@ struct InvalidSpan : public std::runtime_error {
 /// `begin()`/`end()` methods here are just accessors that are not used for iteration, they return
 /// plain indices which have no iterator semantics.
 ///
-/// Empty spans (`begin == end`) and invalid spans (`begin > end`) are not allowed and their
-/// construction will result in an error. See the documentation for the relevant methods for details.
+/// Invalid spans (`begin > end`) are not allowed and their construction will result in an error.
+/// See the documentation for the relevant methods for details.
 class Span {
 public:
+    /// Construct an empty span that "starts" at a given position.
+    ///
+    /// The resulting span will have `begin = position` and `end = position`.
+    static Span make_empty(size_t position);
+
     /// Construct a span that captures only one position.
     ///
     /// The resulting span will have `begin = position` and `end = position + 1`.
@@ -38,7 +43,7 @@ public:
 
     /// Construct a span with given values of `begin` and `end` without any transformations.
     ///
-    /// @throws InvalidSpan if `end <= begin`.
+    /// @throws InvalidSpan if `end < begin`.
     static Span make_from_positions(size_t begin, size_t end);
 
     /// Construct a span with a given value of `begin` and a given length.
@@ -46,7 +51,7 @@ public:
     /// The length is determined by the number of characters covered by this span, and, since
     /// `begin` and `end` form a half-interval, it equals `end - begin`.
     ///
-    /// @throws InvalidSpan if `begin + length` overflows `size_t` or if `length` is 0. Note that
+    /// @throws InvalidSpan if `begin + length` overflows `size_t`. Note that
     /// the error message might not be precise enough.
     static Span make_with_length(size_t begin, size_t length);
 
@@ -68,7 +73,7 @@ private:
     /// Constructs a range from the `begin` and `end` values without any transformation.
     /// This constructor is private because named static methods (`make_*`) are preferrable to avoid
     /// code misinterpretations and mistakes.
-    /// @throws InvalidSpan if `end <= begin`
+    /// @throws InvalidSpan if `end < begin`
     explicit Span(size_t begin, size_t end);
 
     size_t m_begin;

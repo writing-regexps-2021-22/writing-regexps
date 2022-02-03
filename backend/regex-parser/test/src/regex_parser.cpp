@@ -24,102 +24,142 @@ using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
 using wr22::regex_parser::regex::NamedCaptureFlavor;
 using wr22::regex_parser::regex::Part;
+using wr22::regex_parser::regex::SpannedPart;
+using wr22::regex_parser::span::Span;
 using wr22::regex_parser::utils::UnicodeStringView;
 namespace part = wr22::regex_parser::regex::part;
 namespace capture = wr22::regex_parser::regex::capture;
 
 namespace {
-Part lit(const std::u32string_view& str) {
-    std::vector<Part> chars;
+SpannedPart lit(const std::u32string_view& str, size_t begin) {
+    std::vector<SpannedPart> chars;
     chars.reserve(str.size());
+    size_t offset = 0;
     for (auto c : str) {
-        chars.push_back(part::Literal(c));
+        chars.push_back(SpannedPart(part::Literal(c), Span::make_single_position(begin + offset)));
+        ++offset;
     }
-    return part::Sequence(std::move(chars));
+    return SpannedPart(part::Sequence(std::move(chars)), Span::make_with_length(begin, offset));
+}
+
+SpannedPart lit_char(char32_t c, size_t position) {
+    return SpannedPart(part::Literal(c), Span::make_single_position(position));
+}
+
+SpannedPart empty(size_t position) {
+    return SpannedPart(part::Empty(), Span::make_empty(position));
+}
+
+Span whole(size_t length) {
+    return Span::make_with_length(0, length);
 }
 }  // namespace
 
 TEST_CASE("Basics", "[regex]") {
-    CHECK(parse_regex(UnicodeStringView("foo")) == Part(lit(U"foo")));
-    CHECK(parse_regex(UnicodeStringView("x")) == Part(part::Literal(U'x')));
-    CHECK(parse_regex(UnicodeStringView("")) == Part(part::Empty()));
-    CHECK(parse_regex(UnicodeStringView("тест юникода")) == Part(lit(U"тест юникода")));
-    CHECK(parse_regex(UnicodeStringView("\t  whitespace   ")) == Part(lit(U"\t  whitespace   ")));
+    CHECK(parse_regex(UnicodeStringView("foo")) == SpannedPart(lit(U"foo", 0), whole(3)));
+    CHECK(parse_regex(UnicodeStringView("x")) == lit_char(U'x', 0));
+    CHECK(parse_regex(UnicodeStringView("")) == empty(0));
+    CHECK(parse_regex(UnicodeStringView("тест юникода")) == lit(U"тест юникода", 0));
+    CHECK(
+        parse_regex(UnicodeStringView("\t  whitespace   "))
+        == SpannedPart(lit(U"\t  whitespace   ", 0)));
 }
 
 TEST_CASE("Alternatives", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("foo|bar"))
-        == Part(part::Alternatives(vec<Part>(lit(U"foo"), lit(U"bar")))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(lit(U"foo", 0), lit(U"bar", 4))),
+            whole(7)));
     CHECK(
         parse_regex(UnicodeStringView("foo|x"))
-        == Part(part::Alternatives(vec<Part>(lit(U"foo"), part::Literal(U'x')))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(lit(U"foo", 0), lit_char(U'x', 4))),
+            whole(5)));
     CHECK(
         parse_regex(UnicodeStringView("a|b|c|test|d|e"))
-        == Part(part::Alternatives(vec<Part>(
-            part::Literal(U'a'),
-            part::Literal(U'b'),
-            part::Literal(U'c'),
-            lit(U"test"),
-            part::Literal(U'd'),
-            part::Literal(U'e')))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(
+                lit_char(U'a', 0),
+                lit_char(U'b', 2),
+                lit_char(U'c', 4),
+                lit(U"test", 6),
+                lit_char(U'd', 11),
+                lit_char(U'e', 13))),
+            whole(14)));
     CHECK(
         parse_regex(UnicodeStringView("a||b"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Literal(U'a'), part::Empty(), part::Literal(U'b')))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(lit_char(U'a', 0), empty(2), lit_char(U'b', 3))),
+            whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("a|b|"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Literal(U'a'), part::Literal(U'b'), part::Empty()))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(lit_char(U'a', 0), lit_char(U'b', 2), empty(4))),
+            whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("|a|b"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Empty(), part::Literal(U'a'), part::Literal(U'b')))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(empty(0), lit_char(U'a', 1), lit_char(U'b', 3))),
+            whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("|"))
-        == Part(part::Alternatives(vec<Part>(part::Empty(), part::Empty()))));
+        == SpannedPart(part::Alternatives(vec<SpannedPart>(empty(0), empty(2))), whole(1)));
     CHECK(
         parse_regex(UnicodeStringView("|||"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Empty(), part::Empty(), part::Empty(), part::Empty()))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(empty(0), empty(1), empty(2), empty(3))),
+            whole(3)));
 }
 
 TEST_CASE("Groups", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("(aaa)"))
-        == Part(part::Group(capture::Index(), lit(U"aaa"))));
+        == SpannedPart(part::Group(capture::Index(), lit(U"aaa", 1)), whole(5)));
     CHECK(
         parse_regex(UnicodeStringView("(?:foobar)"))
-        == Part(part::Group(capture::None(), lit(U"foobar"))));
+        == SpannedPart(part::Group(capture::None(), lit(U"foobar", 3)), whole(10)));
     CHECK(
         parse_regex(UnicodeStringView("(?<x>foobar)"))
-        == Part(part::Group(capture::Name("x", NamedCaptureFlavor::Angles), lit(U"foobar"))));
+        == SpannedPart(
+            part::Group(capture::Name("x", NamedCaptureFlavor::Angles), lit(U"foobar", 5)),
+            whole(12)));
     CHECK(
         parse_regex(UnicodeStringView("(?<quux>12345)"))
-        == Part(part::Group(capture::Name("quux", NamedCaptureFlavor::Angles), lit(U"12345"))));
+        == SpannedPart(
+            part::Group(capture::Name("quux", NamedCaptureFlavor::Angles), lit(U"12345", 8)),
+            whole(14)));
     CHECK(
         parse_regex(UnicodeStringView("(?'abc123'xyz)"))
-        == Part(
-            part::Group(capture::Name("abc123", NamedCaptureFlavor::Apostrophes), lit(U"xyz"))));
+        == SpannedPart(
+            part::Group(capture::Name("abc123", NamedCaptureFlavor::Apostrophes), lit(U"xyz", 10)),
+            whole(14)));
     CHECK(
         parse_regex(UnicodeStringView("(?P<name>group)"))
-        == Part(
-            part::Group(capture::Name("name", NamedCaptureFlavor::AnglesWithP), lit(U"group"))));
+        == SpannedPart(
+            part::Group(capture::Name("name", NamedCaptureFlavor::AnglesWithP), lit(U"group", 9)),
+            whole(15)));
     CHECK(
         parse_regex(UnicodeStringView("(?P<тест>юникода)"))
-        == Part(
-            part::Group(capture::Name("тест", NamedCaptureFlavor::AnglesWithP), lit(U"юникода"))));
+        == SpannedPart(
+            part::Group(capture::Name("тест", NamedCaptureFlavor::AnglesWithP), lit(U"юникода", 9)),
+            whole(17)));
     CHECK(
-        parse_regex(UnicodeStringView("()")) == Part(part::Group(capture::Index(), part::Empty())));
+        parse_regex(UnicodeStringView("()"))
+        == SpannedPart(part::Group(capture::Index(), empty(1)), whole(2)));
     CHECK(
         parse_regex(UnicodeStringView("(?:)"))
-        == Part(part::Group(capture::None(), part::Empty())));
+        == SpannedPart(part::Group(capture::None(), empty(3)), whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("(?'bb')"))
-        == Part(part::Group(capture::Name("bb", NamedCaptureFlavor::Apostrophes), part::Empty())));
+        == SpannedPart(
+            part::Group(capture::Name("bb", NamedCaptureFlavor::Apostrophes), empty(6)),
+            whole(7)));
     CHECK(
         parse_regex(UnicodeStringView("(?P<ccc>)"))
-        == Part(part::Group(capture::Name("ccc", NamedCaptureFlavor::AnglesWithP), part::Empty())));
+        == SpannedPart(
+            part::Group(capture::Name("ccc", NamedCaptureFlavor::AnglesWithP), empty(8)),
+            whole(9)));
 
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("(a")),
@@ -165,72 +205,122 @@ TEST_CASE("Groups", "[regex]") {
 TEST_CASE("Groups with alternatives", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("aaa|(bbb|ccc)"))
-        == Part(part::Alternatives(vec<Part>(
-            lit(U"aaa"),
-            part::Group(
-                capture::Index(),
-                part::Alternatives(vec<Part>(lit(U"bbb"), lit(U"ccc"))))))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(
+                lit(U"aaa", 0),
+                SpannedPart(
+                    part::Group(
+                        capture::Index(),
+                        SpannedPart(
+                            part::Alternatives(vec<SpannedPart>(lit(U"bbb", 5), lit(U"ccc", 9))),
+                            Span::make_with_length(5, 7))),
+                    Span::make_with_length(4, 9)))),
+            whole(13)));
 
     CHECK(
         parse_regex(UnicodeStringView("aaa|(?:(ddd|bbb)zzz|ccc)"))
-        == Part(part::Alternatives(vec<Part>(
-            lit(U"aaa"),
-            part::Group(
-                capture::None(),
-                part::Alternatives(vec<Part>(
-                    part::Sequence(vec<Part>(
-                        part::Group(
-                            capture::Index(),
-                            part::Alternatives(vec<Part>(lit(U"ddd"), lit(U"bbb")))),
-                        part::Literal(U'z'),
-                        part::Literal(U'z'),
-                        part::Literal(U'z'))),
-                    lit(U"ccc"))))))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(
+                lit(U"aaa", 0),
+                SpannedPart(
+                    part::Group(
+                        capture::None(),
+                        SpannedPart(
+                            part::Alternatives(vec<SpannedPart>(
+                                SpannedPart(
+                                    part::Sequence(vec<SpannedPart>(
+                                        SpannedPart(
+                                            part::Group(
+                                                capture::Index(),
+                                                SpannedPart(
+                                                    part::Alternatives(vec<SpannedPart>(
+                                                        lit(U"ddd", 8),
+                                                        lit(U"bbb", 12))),
+                                                    Span::make_with_length(8, 7))),
+                                            Span::make_with_length(7, 9)),
+                                        lit_char(U'z', 16),
+                                        lit_char(U'z', 17),
+                                        lit_char(U'z', 18))),
+                                    Span::make_with_length(7, 12)),
+                                lit(U"ccc", 20))),
+                            Span::make_with_length(7, 16))),
+                    Span::make_with_length(4, 20)))),
+            whole(24)));
 }
 
 TEST_CASE("Quantifiers", "[regex]") {
-    CHECK(parse_regex(UnicodeStringView("ц?")) == Part(part::Optional(part::Literal(U'ц'))));
-    CHECK(parse_regex(UnicodeStringView("ц+")) == Part(part::Plus(part::Literal(U'ц'))));
-    CHECK(parse_regex(UnicodeStringView("ц*")) == Part(part::Star(part::Literal(U'ц'))));
+    CHECK(
+        parse_regex(UnicodeStringView("z?"))
+        == SpannedPart(part::Optional(lit_char(U'z', 0)), whole(2)));
+    CHECK(
+        parse_regex(UnicodeStringView("z+"))
+        == SpannedPart(part::Plus(lit_char(U'z', 0)), whole(2)));
+    CHECK(
+        parse_regex(UnicodeStringView("z*"))
+        == SpannedPart(part::Star(lit_char(U'z', 0)), whole(2)));
+    CHECK(
+        parse_regex(UnicodeStringView("ц?"))
+        == SpannedPart(part::Optional(lit_char(U'ц', 0)), whole(2)));
+    CHECK(
+        parse_regex(UnicodeStringView("ц+"))
+        == SpannedPart(part::Plus(lit_char(U'ц', 0)), whole(2)));
+    CHECK(
+        parse_regex(UnicodeStringView("ц*"))
+        == SpannedPart(part::Star(lit_char(U'ц', 0)), whole(2)));
     CHECK(
         parse_regex(UnicodeStringView("()?"))
-        == Part(part::Optional(part::Group(capture::Index(), part::Empty()))));
+        == SpannedPart(
+            part::Optional(
+                SpannedPart(part::Group(capture::Index(), empty(1)), Span::make_with_length(1, 2))),
+            whole(3)));
     CHECK(
         parse_regex(UnicodeStringView("abc?"))
-        == Part(part::Sequence(vec<Part>(
-            part::Literal(U'a'),
-            part::Literal(U'b'),
-            part::Optional(part::Literal(U'c'))))));
+        == SpannedPart(
+            part::Sequence(vec<SpannedPart>(
+                lit_char(U'a', 1),
+                lit_char(U'b', 2),
+                SpannedPart(part::Optional(lit_char(U'c', 3)), Span::make_with_length(2, 2)))),
+            whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("a|b?"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Literal(U'a'), part::Optional(part::Literal(U'b'))))));
+        == SpannedPart(
+            part::Alternatives(
+                vec<SpannedPart>(lit_char(U'a', 0), part::Optional(lit_char(U'b', 2)))),
+            whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("a?|b?"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Optional(part::Literal(U'a')), part::Optional(part::Literal(U'b'))))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(
+                SpannedPart(part::Optional(lit_char(U'a', 0)), Span::make_with_length(0, 2)),
+                SpannedPart(part::Optional(lit_char(U'b', 3)), Span::make_with_length(3, 2)))),
+            whole(5)));
     CHECK(
         parse_regex(UnicodeStringView("a+|b*"))
-        == Part(part::Alternatives(
-            vec<Part>(part::Plus(part::Literal(U'a')), part::Star(part::Literal(U'b'))))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(
+                SpannedPart(part::Plus(lit_char(U'a', 0)), Span::make_with_length(0, 2)),
+                SpannedPart(part::Star(lit_char(U'b', 3)), Span::make_with_length(3, 2)))),
+            whole(5)));
     CHECK(
         parse_regex(UnicodeStringView("(a*b+)?|bar*"))
-        == Part(part::Alternatives(vec<Part>(
+        == SpannedPart(part::Alternatives(vec<SpannedPart>(
             part::Optional(part::Group(
                 capture::Index(),
-                part::Sequence(
-                    vec<Part>(part::Star(part::Literal(U'a')), part::Plus(part::Literal(U'b')))))),
-            part::Sequence(vec<Part>(
-                part::Literal(U'b'),
-                part::Literal(U'a'),
-                part::Star(part::Literal(U'r'))))))));
+                part::Sequence(vec<SpannedPart>(
+                    part::Star(lit_char(U'a', 1)),
+                    part::Plus(lit_char(U'b', 3)))))),
+            part::Sequence(vec<SpannedPart>(
+                lit_char(U'b', 8),
+                lit_char(U'a', 9),
+                part::Star(lit_char(U'r', 10))))))));
     CHECK(
         parse_regex(UnicodeStringView("(?:a?)?"))
-        == Part(part::Optional(part::Group(capture::None(), part::Optional(part::Literal(U'a'))))));
+        == SpannedPart(
+            part::Optional(part::Group(capture::None(), part::Optional(lit_char(U'a'))))));
     CHECK(
         parse_regex(UnicodeStringView("(a?)?"))
-        == Part(
-            part::Optional(part::Group(capture::Index(), part::Optional(part::Literal(U'a'))))));
+        == SpannedPart(
+            part::Optional(part::Group(capture::Index(), part::Optional(lit_char(U'a'))))));
 
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("a???")),
@@ -313,6 +403,6 @@ TEST_CASE("Quantifiers", "[regex]") {
 TEST_CASE("Sequences with groups", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("a(b)"))
-        == Part(part::Sequence(
-            vec<Part>(part::Literal(U'a'), part::Group(capture::Index(), part::Literal(U'b'))))));
+        == SpannedPart(part::Sequence(
+            vec<SpannedPart>(lit_char(U'a'), part::Group(capture::Index(), lit_char(U'b'))))));
 }

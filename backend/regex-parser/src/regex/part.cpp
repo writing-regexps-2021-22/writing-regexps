@@ -12,22 +12,22 @@ namespace wr22::regex_parser::regex {
 
 part::Literal::Literal(char32_t character) : character(character) {}
 
-part::Alternatives::Alternatives(std::vector<Part> alternatives)
+part::Alternatives::Alternatives(std::vector<SpannedPart> alternatives)
     : alternatives(std::move(alternatives)) {}
 
-part::Sequence::Sequence(std::vector<Part> items) : items(std::move(items)) {}
+part::Sequence::Sequence(std::vector<SpannedPart> items) : items(std::move(items)) {}
 
-part::Group::Group(Capture capture, Part inner)
+part::Group::Group(Capture capture, SpannedPart inner)
     : capture(std::move(capture)), inner(utils::Box(std::move(inner))) {}
 
-part::Optional::Optional(Part inner) : inner(utils::Box(std::move(inner))) {}
+part::Optional::Optional(SpannedPart inner) : inner(utils::Box(std::move(inner))) {}
 
-part::Plus::Plus(Part inner) : inner(utils::Box(std::move(inner))) {}
+part::Plus::Plus(SpannedPart inner) : inner(utils::Box(std::move(inner))) {}
 
-part::Star::Star(Part inner) : inner(utils::Box(std::move(inner))) {}
+part::Star::Star(SpannedPart inner) : inner(utils::Box(std::move(inner))) {}
 
-std::ostream& operator<<(std::ostream& out, const Part& part) {
-    part.visit(
+std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
+    spanned_part.part().visit(
         [&out](const part::Empty&) { out << "Empty"; },
         [&out](const part::Literal& part) {
             using utf_traits = boost::locale::utf::utf_traits<char>;

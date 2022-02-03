@@ -2,6 +2,7 @@
 
 // wr22
 #include <wr22/regex_parser/regex/capture.hpp>
+#include <wr22/regex_parser/span/span.hpp>
 #include <wr22/regex_parser/utils/adt.hpp>
 #include <wr22/regex_parser/utils/box.hpp>
 
@@ -12,8 +13,9 @@
 
 namespace wr22::regex_parser::regex {
 
-// Forward declaration of `Part`.
+// Forward declarations.
 class Part;
+class SpannedPart;
 
 /// The namespace with the variants of `Part`.
 ///
@@ -46,13 +48,13 @@ namespace part {
     /// successfully.
     ///
     /// As an example, `a|(b)|cde` would be represented as an `Alternatives` part with 3
-    /// alternatives. The alternatives themselves are represented recursively as `Part`s.
+    /// alternatives. The alternatives themselves are represented recursively as `SpannedPart`s.
     struct Alternatives {
-        explicit Alternatives(std::vector<Part> alternatives);
+        explicit Alternatives(std::vector<SpannedPart> alternatives);
         bool operator==(const Alternatives& rhs) const = default;
 
         /// The list of the alternatives.
-        std::vector<Part> alternatives;
+        std::vector<SpannedPart> alternatives;
     };
 
     /// A regex part with the list of items to be matched one after another.
@@ -61,11 +63,11 @@ namespace part {
     /// As an example, `a[b-e].` is a sequence of 3 subexpressions: `a`, `[b-e]` and `.`.
     /// As an another example, `ab` is a sequence of 2 subexpressions: `a` and `b`.
     struct Sequence {
-        explicit Sequence(std::vector<Part> items);
+        explicit Sequence(std::vector<SpannedPart> items);
         bool operator==(const Sequence& rhs) const = default;
 
         /// The list of the subexpressions.
-        std::vector<Part> items;
+        std::vector<SpannedPart> items;
     };
 
     /// A regex part that represents a group in parentheses.
@@ -74,49 +76,49 @@ namespace part {
     /// `(some group)`, `(?:blablabla)` and `(?P<group_name>group contents)` are all groups.
     ///
     /// A group has two main attributes: (1) how it is captured during matching and (2) the contents
-    /// of the group. The contents is simply another `Part`. The capture behavior is expressed by a
-    /// separate type `Capture`. See its docs for additional info, and take a look at
+    /// of the group. The contents is simply another `SpannedPart`. The capture behavior is
+    /// expressed by a separate type `Capture`. See its docs for additional info, and take a look at
     /// <https://www.regular-expressions.info/brackets.html> for an introduction to or a recap of
     /// regex groups and capturing.
     struct Group {
         /// Convenience constructor.
-        explicit Group(Capture capture, Part inner);
+        explicit Group(Capture capture, SpannedPart inner);
         bool operator==(const Group& rhs) const = default;
 
         /// Capture behavior.
         Capture capture;
         /// The smart pointer to the group contents.
-        utils::Box<Part> inner;
+        utils::Box<SpannedPart> inner;
     };
 
     /// A regex part specifying an optional quantifier (`(expression)?`).
     struct Optional {
         /// Convenience constructor.
-        explicit Optional(Part inner);
+        explicit Optional(SpannedPart inner);
         bool operator==(const Optional& rhs) const = default;
 
         /// The smart pointer to the subexpression under the quantifier.
-        utils::Box<Part> inner;
+        utils::Box<SpannedPart> inner;
     };
 
     /// A regex part specifying an "at least one" quantifier (`(expression)+`).
     struct Plus {
         /// Convenience constructor.
-        explicit Plus(Part inner);
+        explicit Plus(SpannedPart inner);
         bool operator==(const Plus& rhs) const = default;
 
         /// The smart pointer to the subexpression under the quantifier.
-        utils::Box<Part> inner;
+        utils::Box<SpannedPart> inner;
     };
 
     /// A regex part specifying an "at least zero" quantifier (`(expression)*`).
     struct Star {
         /// Convenience constructor.
-        explicit Star(Part inner);
+        explicit Star(SpannedPart inner);
         bool operator==(const Star& rhs) const = default;
 
         /// The smart pointer to the subexpression under the quantifier.
-        utils::Box<Part> inner;
+        utils::Box<SpannedPart> inner;
     };
 
     using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star>;
@@ -145,9 +147,34 @@ namespace part {
 /// represented as a `Part`. For the list of operations that can be performed on this type, e.g. to
 /// check if an instance of `Parts` has a specific variant and, if yes, access the value of this
 /// variant, see the documentation for the `utils::Adt` class, which `Part` inherits from.
+///
+/// Note that this type contains no span information for the root AST node. For a spanned version,
+/// see `SpannedPart`.
 class Part : public part::Adt {
 public:
     using part::Adt::Adt;
+};
+
+/// A version of `Part` including the span information (position in the input) of the root AST node
+/// (child nodes always contain it because they are represented as `SpannedPart`s themselves).
+class SpannedPart {
+public:
+    explicit SpannedPart(Part part, span::Span span);
+
+    bool operator==(const SpannedPart& other) const = default;
+    bool operator!=(const SpannedPart& other) const = default;
+
+    /// Access the wrapped `Part` (const version).
+    const Part& part() const;
+    /// Access the wrapped `Part` (non-const version).
+    Part& part();
+
+    /// Get the associated span.
+    span::Span span() const;
+
+private:
+    Part m_part;
+    span::Span m_span;
 };
 
 /// Convert a `Part` to a textual representation and write it to an `std::ostream`.
