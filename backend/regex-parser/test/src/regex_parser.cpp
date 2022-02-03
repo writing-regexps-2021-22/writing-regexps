@@ -17,13 +17,11 @@
 #include <string_view>
 
 using Catch::Predicate;
-using regex_parser_tests::Equals;
 using regex_parser_tests::vec;
 using wr22::regex_parser::parser::parse_regex;
 using wr22::regex_parser::parser::errors::ExpectedEnd;
 using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
-using wr22::regex_parser::regex::Capture;
 using wr22::regex_parser::regex::NamedCaptureFlavor;
 using wr22::regex_parser::regex::Part;
 using wr22::regex_parser::utils::UnicodeStringView;

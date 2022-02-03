@@ -48,7 +48,6 @@ char32_t UnicodeStringViewIterator::operator*() {
         throw UnicodeStringView::InvalidUtf8{};
     }
 
-    auto codepoint = codepoint_opt.value();
     return codepoint_opt.value();
 }
 
