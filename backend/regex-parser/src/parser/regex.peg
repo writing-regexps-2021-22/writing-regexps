@@ -1,7 +1,0 @@
-Regex <- Alternatives
-Alternatives <- (Sequence '|')* Sequence
-Sequence <- Atom*
-Atom <- CharLiteral / Group
-CharLiteral <- [^[|()?+*.]
-Group <- '(?P<' GroupName '>' Regex ')' / '(?<' GroupName '>' Regex ')' / "(?'" GroupName "'" Regex ')' / '(' Regex ')'
-GroupName = [^>']+
