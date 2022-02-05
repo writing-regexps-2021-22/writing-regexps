@@ -115,7 +115,7 @@ TEST_CASE("Span::make_with_length works", "[span]") {
     {
         auto span = Span::make_with_length(17, 0);
         CHECK(span.begin() == 17);
-        CHECK(span.end() == 0);
+        CHECK(span.end() == 17);
     }
 
     auto max = std::numeric_limits<size_t>::max();
@@ -129,10 +129,18 @@ TEST_CASE("Span::make_with_length works", "[span]") {
         CHECK(span.begin() == 1000);
         CHECK(span.end() == max);
     }
-    CHECK_THROWS_AS(Span::make_with_length(888, 0), InvalidSpan);
+    {
+        auto span = Span::make_with_length(888, 0);
+        CHECK(span.begin() == 888);
+        CHECK(span.end() == 888);
+    }
+    {
+        auto span = Span::make_with_length(max, 0);
+        CHECK(span.begin() == max);
+        CHECK(span.end() == max);
+    }
     CHECK_THROWS_AS(Span::make_with_length(1, max), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(max, 1), InvalidSpan);
-    CHECK_THROWS_AS(Span::make_with_length(max, 0), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(max - 1, 2), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(max - 1, 100), InvalidSpan);
     CHECK_THROWS_AS(Span::make_with_length(max, max), InvalidSpan);

@@ -23,7 +23,6 @@ using wr22::regex_parser::parser::errors::ExpectedEnd;
 using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
 using wr22::regex_parser::regex::NamedCaptureFlavor;
-using wr22::regex_parser::regex::Part;
 using wr22::regex_parser::regex::SpannedPart;
 using wr22::regex_parser::span::Span;
 using wr22::regex_parser::utils::UnicodeStringView;
@@ -56,7 +55,7 @@ Span whole(size_t length) {
 }  // namespace
 
 TEST_CASE("Basics", "[regex]") {
-    CHECK(parse_regex(UnicodeStringView("foo")) == SpannedPart(lit(U"foo", 0), whole(3)));
+    CHECK(parse_regex(UnicodeStringView("foo")) == lit(U"foo", 0));
     CHECK(parse_regex(UnicodeStringView("x")) == lit_char(U'x', 0));
     CHECK(parse_regex(UnicodeStringView("")) == empty(0));
     CHECK(parse_regex(UnicodeStringView("тест юникода")) == lit(U"тест юникода", 0));
@@ -104,7 +103,7 @@ TEST_CASE("Alternatives", "[regex]") {
             whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("|"))
-        == SpannedPart(part::Alternatives(vec<SpannedPart>(empty(0), empty(2))), whole(1)));
+        == SpannedPart(part::Alternatives(vec<SpannedPart>(empty(0), empty(1))), whole(1)));
     CHECK(
         parse_regex(UnicodeStringView("|||"))
         == SpannedPart(
@@ -271,21 +270,22 @@ TEST_CASE("Quantifiers", "[regex]") {
         parse_regex(UnicodeStringView("()?"))
         == SpannedPart(
             part::Optional(
-                SpannedPart(part::Group(capture::Index(), empty(1)), Span::make_with_length(1, 2))),
+                SpannedPart(part::Group(capture::Index(), empty(1)), Span::make_with_length(0, 2))),
             whole(3)));
     CHECK(
         parse_regex(UnicodeStringView("abc?"))
         == SpannedPart(
             part::Sequence(vec<SpannedPart>(
-                lit_char(U'a', 1),
-                lit_char(U'b', 2),
-                SpannedPart(part::Optional(lit_char(U'c', 3)), Span::make_with_length(2, 2)))),
+                lit_char(U'a', 0),
+                lit_char(U'b', 1),
+                SpannedPart(part::Optional(lit_char(U'c', 2)), Span::make_with_length(2, 2)))),
             whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("a|b?"))
         == SpannedPart(
-            part::Alternatives(
-                vec<SpannedPart>(lit_char(U'a', 0), part::Optional(lit_char(U'b', 2)))),
+            part::Alternatives(vec<SpannedPart>(
+                lit_char(U'a', 0),
+                SpannedPart(part::Optional(lit_char(U'b', 2)), Span::make_with_length(2, 2)))),
             whole(4)));
     CHECK(
         parse_regex(UnicodeStringView("a?|b?"))
@@ -303,24 +303,48 @@ TEST_CASE("Quantifiers", "[regex]") {
             whole(5)));
     CHECK(
         parse_regex(UnicodeStringView("(a*b+)?|bar*"))
-        == SpannedPart(part::Alternatives(vec<SpannedPart>(
-            part::Optional(part::Group(
-                capture::Index(),
-                part::Sequence(vec<SpannedPart>(
-                    part::Star(lit_char(U'a', 1)),
-                    part::Plus(lit_char(U'b', 3)))))),
-            part::Sequence(vec<SpannedPart>(
-                lit_char(U'b', 8),
-                lit_char(U'a', 9),
-                part::Star(lit_char(U'r', 10))))))));
+        == SpannedPart(
+            part::Alternatives(vec<SpannedPart>(
+                SpannedPart(
+                    part::Optional(SpannedPart(
+                        part::Group(
+                            capture::Index(),
+                            SpannedPart(
+                                part::Sequence(vec<SpannedPart>(
+                                    SpannedPart(
+                                        part::Star(lit_char(U'a', 1)),
+                                        Span::make_with_length(1, 2)),
+                                    SpannedPart(
+                                        part::Plus(lit_char(U'b', 3)),
+                                        Span::make_with_length(3, 2)))),
+                                Span::make_with_length(1, 4))),
+                        Span::make_with_length(0, 6))),
+                    Span::make_with_length(0, 7)),
+                SpannedPart(
+                    part::Sequence(vec<SpannedPart>(
+                        lit_char(U'b', 8),
+                        lit_char(U'a', 9),
+                        SpannedPart(part::Star(lit_char(U'r', 10)), Span::make_with_length(10, 2)))),
+                    Span::make_with_length(8, 4)))),
+            whole(12)));
     CHECK(
         parse_regex(UnicodeStringView("(?:a?)?"))
         == SpannedPart(
-            part::Optional(part::Group(capture::None(), part::Optional(lit_char(U'a'))))));
+            part::Optional(SpannedPart(
+                part::Group(
+                    capture::None(),
+                    SpannedPart(part::Optional(lit_char(U'a', 3)), Span::make_with_length(3, 2))),
+                Span::make_with_length(0, 6))),
+            whole(7)));
     CHECK(
         parse_regex(UnicodeStringView("(a?)?"))
         == SpannedPart(
-            part::Optional(part::Group(capture::Index(), part::Optional(lit_char(U'a'))))));
+            part::Optional(SpannedPart(
+                part::Group(
+                    capture::Index(),
+                    SpannedPart(part::Optional(lit_char(U'a', 1)), Span::make_with_length(1, 2))),
+                Span::make_with_length(0, 4))),
+            whole(5)));
 
     CHECK_THROWS_MATCHES(
         parse_regex(UnicodeStringView("a???")),
@@ -403,6 +427,11 @@ TEST_CASE("Quantifiers", "[regex]") {
 TEST_CASE("Sequences with groups", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("a(b)"))
-        == SpannedPart(part::Sequence(
-            vec<SpannedPart>(lit_char(U'a'), part::Group(capture::Index(), lit_char(U'b'))))));
+        == SpannedPart(
+            part::Sequence(vec<SpannedPart>(
+                lit_char(U'a', 0),
+                SpannedPart(
+                    part::Group(capture::Index(), lit_char(U'b', 2)),
+                    Span::make_with_length(1, 3)))),
+            whole(4)));
 }

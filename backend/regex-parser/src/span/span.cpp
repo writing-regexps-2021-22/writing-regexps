@@ -4,6 +4,7 @@
 
 // fmt
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 
 namespace wr22::regex_parser::span {
 
@@ -13,6 +14,10 @@ InvalidSpan::InvalidSpan(size_t begin, size_t end)
         begin,
         end)),
       begin(begin), end(end) {}
+
+Span Span::make_empty(size_t position) {
+    return Span::make_from_positions(position, position);
+}
 
 Span Span::make_single_position(size_t position) {
     return Span::make_from_positions(position, position + 1);
@@ -42,6 +47,11 @@ Span::Span(size_t begin, size_t end) : m_begin(begin), m_end(end) {
     if (end < begin) {
         throw InvalidSpan(begin, end);
     }
+}
+
+std::ostream& operator<<(std::ostream& out, Span span) {
+    fmt::print(out, "{}..{}", span.begin(), span.end());
+    return out;
 }
 
 }  // namespace wr22::regex_parser::span

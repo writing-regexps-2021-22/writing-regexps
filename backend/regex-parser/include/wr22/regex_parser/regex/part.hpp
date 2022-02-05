@@ -178,6 +178,6 @@ private:
 };
 
 /// Convert a `Part` to a textual representation and write it to an `std::ostream`.
-std::ostream& operator<<(std::ostream& out, const Part& part);
+std::ostream& operator<<(std::ostream& out, const SpannedPart& part);
 
 }  // namespace wr22::regex_parser::regex

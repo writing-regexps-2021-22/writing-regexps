@@ -3,6 +3,7 @@
 // stl
 #include <cstddef>
 #include <stdexcept>
+#include <ostream>
 
 namespace wr22::regex_parser::span {
 
@@ -79,5 +80,7 @@ private:
     size_t m_begin;
     size_t m_end;
 };
+
+std::ostream& operator<<(std::ostream& out, Span span);
 
 }  // namespace wr22::regex_parser::span
