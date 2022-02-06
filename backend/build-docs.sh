@@ -21,23 +21,10 @@ mkdir -p -- "$output_dir/"
 echo 'Copying API reference documentation'
 cp -r --reflink=auto -- "build/docs/html/"* "$output_dir/"
 echo 'Compiling readme'
-pandoc README.md -o "$output_dir/readme.tmp.html"
-echo "<!doctype html>
-<html>
-    <head>
-        <title>$project</title>
-        <link rel=\"stylesheet\" href=\"../style.css\">
-    </head>
-    <body>
-        <div class=\"main\">
-            <a href=\"../index.html\">[Index]</a> ·
-            <a href=\"index.html\">[API reference (HTML)]</a> ·
-            <a href=\"$project-api-reference.pdf\">[API reference (PDF)]</a>
-            <br>
-            $(cat -- "$output_dir/readme.tmp.html")
-        </div>
-    </body>
-</html>" > "$output_dir/readme.html"
+pandoc README.md -o "$output_dir/readme.tmp.html" --highlight-style pygments -s --metadata "title=$project"
+cat -- "$output_dir/readme.tmp.html" \
+    | sed -e 's%</head>%<link rel="stylesheet" href="../style.css"></head>%' \
+    | sed -e "s%<body>%<body><a href=\"../index.html\">[Index]</a> · <a href=\"index.html\">[API reference (HTML)]</a> · <a href=\"$project-api-reference.pdf\">[API reference (PDF)]</a><br>%" > "$output_dir/readme.html"
 rm -f -- "$output_dir/readme.tmp.html"
 echo 'Compiling PDF documentation'
 pushd build/docs/latex/
