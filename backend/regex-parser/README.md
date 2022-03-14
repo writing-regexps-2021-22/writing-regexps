@@ -95,10 +95,10 @@ The level of regex support is as follows.
 - Groups (capture by index or by name (3 flavors) or none at all)
 - Alternative lists (`a|bb|ccc`)
 - Quantifiers `?`, `+` and `*` (greedy only)
+- Wildcards (`.`)
 
 **Unsupported features**:
 
-- Wildcards (`.`)
 - Character classes (`[a-z]`)
 - Start of line / end of line (`^`, `$`)
 - Repetitions (e.g. `(abc){3}` or `x{5,10}`)
