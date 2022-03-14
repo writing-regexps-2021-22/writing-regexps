@@ -121,7 +121,14 @@ namespace part {
         utils::Box<SpannedPart> inner;
     };
 
-    using Adt = utils::Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star>;
+    /// A regex part specifying any single character (`.`).
+    struct Wildcard {
+        explicit Wildcard() = default;
+        bool operator==(const Wildcard& rhs) const = default;
+    };
+
+    using Adt = utils::
+        Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star, Wildcard>;
 }  // namespace part
 
 /// A part of a regular expression and its AST node type.

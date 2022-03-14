@@ -152,6 +152,8 @@ public:
         auto la = lookahead_nonempty("an openning parenthesis (`(`) or a plain character");
         if (la == U'(') {
             result = parse_group();
+        } else if (la == U'.') {
+            result = parse_wildcard();
         } else {
             result = parse_char_literal();
         }
@@ -171,6 +173,18 @@ public:
             return make_spanned(begin, regex::part::Plus(std::move(result.value())));
         }
         return std::move(result.value());
+    }
+
+    /// Intermediate rule: parse a wildcard (`.`).
+    ///
+    /// @returns the wildcard AST node.
+    ///
+    /// @throws errors::UnexpectedEnd if all characters from the input have already been consumed.
+    /// @throws errors::UnexpectedChar if the next input character is not `.`.
+    regex::SpannedPart parse_wildcard() {
+        auto position = m_pos;
+        expect_char(U'.', "the wildcard character (`.`)");
+        return regex::SpannedPart(regex::part::Wildcard(), Span::make_single_position(position));
     }
 
     /// Intermediate rule: parse a character literal.
@@ -376,7 +390,7 @@ private:
     ///
     /// Helper function.
     static bool can_start_atom(char32_t c) {
-        return c == '(' || is_valid_for_char_literal(c);
+        return c == '(' || c == '.' || is_valid_for_char_literal(c);
     }
 
     /// Check if an atom can start with a given character.

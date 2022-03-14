@@ -68,7 +68,12 @@ std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
             out << " }";
         },
         [&out, span](const part::Group& part) {
-            fmt::print(out, "Group [{}] {{ capture: {}, inner: {} }}", span, part.capture, *part.inner);
+            fmt::print(
+                out,
+                "Group [{}] {{ capture: {}, inner: {} }}",
+                span,
+                part.capture,
+                *part.inner);
         },
         [&out, span](const part::Optional& part) {
             fmt::print(out, "Optional [{}] {{ {} }}", span, *part.inner);
@@ -78,7 +83,8 @@ std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
         },
         [&out, span](const part::Star& part) {
             fmt::print(out, "Star [{}] {{ {} }}", span, *part.inner);
-        });
+        },
+        [&out, span](const part::Wildcard& part) { fmt::print(out, "Wildcard [{}]", span); });
     return out;
 }
 

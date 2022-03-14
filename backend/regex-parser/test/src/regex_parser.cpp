@@ -424,6 +424,23 @@ TEST_CASE("Quantifiers", "[regex]") {
             [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
 }
 
+TEST_CASE("Wildcard", "[regex]") {
+    CHECK(parse_regex(UnicodeStringView(".")) == SpannedPart(part::Wildcard(), whole(1)));
+    CHECK(
+        parse_regex(UnicodeStringView("a.b"))
+        == SpannedPart(
+            part::Sequence(vec<SpannedPart>(
+                lit_char(U'a', 0),
+                SpannedPart(part::Wildcard(), Span::make_with_length(1, 1)),
+                lit_char(U'b', 2))),
+            whole(3)));
+    CHECK(
+        parse_regex(UnicodeStringView(".?"))
+        == SpannedPart(
+            part::Optional(SpannedPart(part::Wildcard(), Span::make_with_length(0, 1))),
+            whole(2)));
+}
+
 TEST_CASE("Sequences with groups", "[regex]") {
     CHECK(
         parse_regex(UnicodeStringView("a(b)"))
