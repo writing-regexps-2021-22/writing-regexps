@@ -84,7 +84,9 @@ std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
         [&out, span](const part::Star& part) {
             fmt::print(out, "Star [{}] {{ {} }}", span, *part.inner);
         },
-        [&out, span](const part::Wildcard& part) { fmt::print(out, "Wildcard [{}]", span); });
+        [&out, span]([[maybe_unused]] const part::Wildcard& part) {
+            fmt::print(out, "Wildcard [{}]", span);
+        });
     return out;
 }
 
