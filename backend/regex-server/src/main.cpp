@@ -1,7 +1,17 @@
-#include <wr22/regex_parser/parser/regex.hpp>
-#include <iostream>
+#define CROW_MAIN
+
+// wr22
+#include <wr22/regex_server/webserver.hpp>
+
+// spdlog
+#include <spdlog/spdlog.h>
 
 int main() {
-    auto regex = U"a(b|c)+";
-    std::cout << wr22::regex_parser::parser::parse_regex(regex) << std::endl;
+    try {
+        auto webserver = wr22::regex_server::Webserver();
+        // TODO: make use of non-blocking methods if necessary.
+        webserver.run();
+    } catch (const std::exception& e) {
+        SPDLOG_ERROR("Unhandled exception: {}", e.what());
+    }
 }

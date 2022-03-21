@@ -15,6 +15,11 @@ target_compile_options(
         -Werror=switch
         -pedantic
 )
+target_compile_definitions(
+    wr22-regex-server-library
+    PUBLIC
+        SPDLOG_FMT_EXTERNAL
+)
 target_link_libraries(
     wr22-regex-server-library
     PUBLIC
