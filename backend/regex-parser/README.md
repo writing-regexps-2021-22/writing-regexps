@@ -1,6 +1,6 @@
 # regex-parser
 
-This is the library for parsing regular expressions. It takes a regular expression as a UTF-8
+This is the library for parsing regular expressions. It takes a regular expression as a UTF-32
 string and parses it into its syntax tree, throwing exceptions if the regular expression cannot
 be parsed (has invalid syntax). The syntax tree consists of nodes, each representing a particular
 element in the regex. Each node contains full information about the component of the regex it
@@ -13,30 +13,16 @@ The function that does parsing is [`wr22::regex_parser::parser::parse_regex`][fn
 A brief example of its usage is as follows:
 
 ```cpp
-// Assume `parse_regex` and `UnicodeStringView` are already in the scope.
-auto regex = std::string("a(b|c)+");
-auto syntax_tree = parse_regex(UnicodeStringView(regex));
+// Assume `parse_regex` is already in the scope.
+auto regex = U"a(b|c)+";
+auto syntax_tree = parse_regex(regex);
 std::cout << syntax_tree << std::endl;
 ```
 
-`parse_regex` accepts a [`wr22::regex_parser::utils::UnicodeStringView`][t.unicode_string_view]
-as an argument and returns a [`wr22::regex_parser::regex::SpannedPart`][t.spanned_part].
-`UnicodeStringView` is a small wrapper around [`std::string_view`][std::string_view] (also
-compatible with [`std::string`][std::string] and ordinary string literals, see the example for
-details). It assumes that a string is UTF-8 encoded and allows to iterate over Unicode characters
-(technically, code points) in this string, decoding them from UTF-8 on the fly. The characters
-are represented as `char32_t`, so that any Unicode code point can fit into this representation.
-
-Currently, it is impossible to obtain a character by its index in a `UnicodeStringView`. Since this
-is tricky to implement both simply and efficiently, the way the library handles Unicode might be
-changed later (e.g. by making `parse_regex` accept a [`std::u32string_view`][std::u32string_view]
-instead).  Of course, basic indexing/slicing operations on a `UnicodeStringView` will be
-available before this library is considered ready to be used. Please note that getting a character
-with a specified index in an `std::string_view` that refers to this string is not equivalent:
-for string encoded in UTF-8 `std::string_view` considers non-ASCII characters as a sequence
-of several bytes, and indexes only bytes. For example, `std::string_view("Привет")[3] ==
-'\x80'`, while (hypothetical) `UnicodeStringView("Привет")[3] == U'в'` (`U` indicates that
-'в' is a `char32_t`, not `char`).
+`parse_regex` accepts a [`std::u32string_view`][std::u32string_view] as an argument and returns
+a [`wr22::regex_parser::regex::SpannedPart`][t.spanned_part].  The characters comprising a
+regular expression are represented as `char32_t`, so that any Unicode code point can fit into
+this representation.
 
 The `SpannedPart` returned from `parse_regex()` represents the syntax tree of the parsed
 regular expression.  `SpannedPart` consists of two items:
@@ -64,28 +50,28 @@ syntax tree nodes, which correspond to the [variants][v.part] of `Part`:
   For additional and more detailed information, see the API reference.
 - Quantifiers (`part::Optional`, `part::Star`, `part::Plus`). These nodes represent a quantifier over
   a subexpression (e.g. `(foo)?`, `.*` or `[a-z]+`).
+- Wildcard (`part::Wildcard`). Represents a "dot" whildcard matching any single character (`.`).
 
 More variants will be eventually added.
 
-Each of the listed types is a type a syntax tree node might have. Either of these types may be contained
-in a `Part`, since these types are `Part`'s variants. To check what type of a syntax tree node is contained
-in a given `Part` and to access the stored value of this type, the method [`Part::visit`][m.part.visit]
-exists (see the API reference for a usage example).
+Each of the listed types is a type a syntax tree node might have. Either of these types may be
+contained in a `Part`, since these types are `Part`'s variants. To check what type of a syntax
+tree node is contained in a given `Part` and to access the stored value of this type, the method
+[`Part::visit`][m.part.visit] exists (see the API reference for a usage example).
 
-For a more detailed reference on the functions and data types available in this library,
-we ask the reader to take a look at the [API reference][api].
+For a more detailed reference on the functions and data types available in this library, we
+ask the reader to take a look at the [API reference][api].
 
 ## Library status
-Currently, the library is not ready to be seriously used as a building block. Some prototyping can
-be done now, but the library's interface may currently change without a warning, and not all concepts
-that might be necessary for the library usage are implemented yet (e.g. indexing a `UnicodeStringView`
-is not currently possible). The library code resides on the `feature/regex-parser-cpp` branch
-and will be merged into `master`/`main` when it becomes ready to be used (the library's interface might
-still change from time to time).
+Currently, the library is not ready to be seriously used as a building block. Some prototyping
+can be done now, but the library's interface may currently change without a warning, including
+breaking changes. The library code resides on the `feature/regex-parser-cpp` branch and will
+be merged into `main` when it becomes ready to be used (the library's interface might still
+change from time to time).
 
-Utilities such as `Adt` or `UnicodeStringView` (if not removed) might split off into a separate utility
-library if it becomes necessary to use them from other code as well. This might change their namespaces
-and the header files that need to be included.
+Utilities such as `Adt` might split off into a separate utility library if it becomes necessary
+to use them from other code as well. This might change their namespaces and the header files
+that need to be included.
 
 The level of regex support is as follows.
 
@@ -167,7 +153,6 @@ Additional optional CMake flags may be useful in some cases:
 [t.part]: https://writing-regexps-2021-22.github.io/docs/regex-parser/classwr22_1_1regex__parser_1_1regex_1_1Part.html
 [t.span]: https://writing-regexps-2021-22.github.io/docs/regex-parser/classwr22_1_1regex__parser_1_1span_1_1Span.html
 [t.spanned_part]: https://writing-regexps-2021-22.github.io/docs/regex-parser/classwr22_1_1regex__parser_1_1regex_1_1SpannedPart.html
-[t.unicode_string_view]: https://writing-regexps-2021-22.github.io/docs/regex-parser/classwr22_1_1regex__parser_1_1utils_1_1UnicodeStringView.html
 [tool.cmake]: https://cmake.org
 [tool.ninja]: https://ninja-build.org
 [tool.ycm]: https://github.com/ycm-core/YouCompleteMe

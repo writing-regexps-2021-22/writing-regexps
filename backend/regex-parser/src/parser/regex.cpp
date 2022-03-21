@@ -1,5 +1,4 @@
 // wr22
-#include <boost/locale/utf.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
@@ -12,6 +11,7 @@
 
 // boost
 #include <boost/locale/encoding_utf.hpp>
+#include <boost/locale/utf.hpp>
 
 namespace wr22::regex_parser::parser {
 
@@ -465,7 +465,7 @@ private:
 template <typename Iter, typename Sentinel>
 Parser(Iter begin, Sentinel end) -> Parser<Iter, Sentinel>;
 
-regex::SpannedPart parse_regex(const utils::UnicodeStringView& regex) {
+regex::SpannedPart parse_regex(const std::u32string_view& regex) {
     auto parser = Parser(regex.begin(), regex.end());
     auto result = parser.parse_regex();
     parser.expect_end();
