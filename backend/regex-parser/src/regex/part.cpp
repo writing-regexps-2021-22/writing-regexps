@@ -104,4 +104,53 @@ span::Span SpannedPart::span() const {
     return m_span;
 }
 
+namespace part {
+    void to_json(nlohmann::json& j, [[maybe_unused]] const part::Empty& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Literal& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Alternatives& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Sequence& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Group& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Optional& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Plus& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const part::Star& part) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, [[maybe_unused]] const part::Wildcard& part) {
+        j = nlohmann::json::object();
+    }
+}  // namespace part
+
+void to_json(nlohmann::json& j, const Part& part) {
+    part.visit([&j](const auto& variant) { to_json(j, variant); });
+    j["type"] = part.visit(
+        [](const auto& variant) { return std::decay_t<decltype(variant)>::code_name; });
+}
+
+void to_json(nlohmann::json& j, const SpannedPart& part) {
+    to_json(j, part.part());
+    //to_json(part.span(), j["span"]);
+}
+
 }  // namespace wr22::regex_parser::regex
