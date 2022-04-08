@@ -1,10 +1,10 @@
 #pragma once
 
-// wr22
-#include <wr22/regex_server/json_result.hpp>
-
 // crow
 #include <crow_all.h>
+
+// nlohmann
+#include <nlohmann/json.hpp>
 
 namespace wr22::regex_server {
 
@@ -19,7 +19,7 @@ public:
     void run();
 
 private:
-    void parse_handler(const crow::request& request, crow::response& response);
+    nlohmann::json parse_handler(const crow::request& request, crow::response& response);
 
     crow::SimpleApp m_app;
 };
