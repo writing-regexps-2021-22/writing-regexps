@@ -96,7 +96,7 @@ namespace part {
         /// Convenience constructor.
         explicit Group(Capture capture, SpannedPart inner);
         bool operator==(const Group& rhs) const = default;
-        static constexpr const char* code_name = "sequence";
+        static constexpr const char* code_name = "group";
 
         /// Capture behavior.
         Capture capture;

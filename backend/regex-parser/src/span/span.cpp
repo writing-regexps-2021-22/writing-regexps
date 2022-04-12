@@ -54,4 +54,8 @@ std::ostream& operator<<(std::ostream& out, Span span) {
     return out;
 }
 
+void to_json(nlohmann::json& j, Span span) {
+    j = nlohmann::json::array({span.begin(), span.end()});
+}
+
 }  // namespace wr22::regex_parser::span

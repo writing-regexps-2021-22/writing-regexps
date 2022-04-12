@@ -5,6 +5,9 @@
 #include <stdexcept>
 #include <ostream>
 
+// nlohmann
+#include <nlohmann/json.hpp>
+
 namespace wr22::regex_parser::span {
 
 /// The exception thrown on an attempt to construct an invalid span.
@@ -82,5 +85,6 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& out, Span span);
+void to_json(nlohmann::json& j, Span span);
 
 }  // namespace wr22::regex_parser::span

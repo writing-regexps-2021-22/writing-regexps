@@ -32,4 +32,25 @@ std::ostream& operator<<(std::ostream& out, const Capture& capture) {
     return out;
 }
 
+void to_json(nlohmann::json& j, const Capture& capture) {
+    capture.visit([&j](const auto& variant) { to_json(j, variant); });
+    j["type"] = capture.visit([](const auto& variant) { return variant.code_name; });
+}
+
+namespace capture {
+    void to_json(nlohmann::json& j, [[maybe_unused]] const None& capture) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, [[maybe_unused]] const Index& capture) {
+        j = nlohmann::json::object();
+    }
+
+    void to_json(nlohmann::json& j, const Name& capture) {
+        j = nlohmann::json::object();
+        j["name"] = capture.name;
+        j["flavor"] = capture.flavor;
+    }
+}
+
 }  // namespace wr22::regex_parser::regex

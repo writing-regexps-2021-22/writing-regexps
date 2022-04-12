@@ -3,6 +3,9 @@
 // stl
 #include <iosfwd>
 
+// nlohmann
+#include <nlohmann/json.hpp>
+
 namespace wr22::regex_parser::regex {
 
 /// The flavor (dialect) of a named group capture.
@@ -22,5 +25,6 @@ enum class NamedCaptureFlavor
 };
 
 std::ostream& operator<<(std::ostream& out, NamedCaptureFlavor flavor);
+void to_json(nlohmann::json& j, NamedCaptureFlavor flavor);
 
 }  // namespace wr22::regex_parser::regex

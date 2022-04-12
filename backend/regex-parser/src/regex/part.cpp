@@ -1,5 +1,6 @@
 // wr22
 #include "wr22/regex_parser/span/span.hpp"
+#include <boost/locale/encoding_utf.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
 
 // STL
@@ -104,6 +105,14 @@ span::Span SpannedPart::span() const {
     return m_span;
 }
 
+namespace {
+    std::string encode_utf32_char(char32_t c) {
+        auto begin = &c;
+        auto end = begin + 1;
+        return boost::locale::conv::utf_to_utf<char>(begin, end);
+    }
+}  // namespace
+
 namespace part {
     void to_json(nlohmann::json& j, [[maybe_unused]] const part::Empty& part) {
         j = nlohmann::json::object();
@@ -111,30 +120,38 @@ namespace part {
 
     void to_json(nlohmann::json& j, const part::Literal& part) {
         j = nlohmann::json::object();
+        j["char"] = encode_utf32_char(part.character);
     }
 
     void to_json(nlohmann::json& j, const part::Alternatives& part) {
         j = nlohmann::json::object();
+        j["alternatives"] = part.alternatives;
     }
 
     void to_json(nlohmann::json& j, const part::Sequence& part) {
         j = nlohmann::json::object();
+        j["items"] = part.items;
     }
 
     void to_json(nlohmann::json& j, const part::Group& part) {
         j = nlohmann::json::object();
+        j["inner"] = *part.inner;
+        j["capture"] = part.capture;
     }
 
     void to_json(nlohmann::json& j, const part::Optional& part) {
         j = nlohmann::json::object();
+        j["inner"] = *part.inner;
     }
 
     void to_json(nlohmann::json& j, const part::Plus& part) {
         j = nlohmann::json::object();
+        j["inner"] = *part.inner;
     }
 
     void to_json(nlohmann::json& j, const part::Star& part) {
         j = nlohmann::json::object();
+        j["inner"] = *part.inner;
     }
 
     void to_json(nlohmann::json& j, [[maybe_unused]] const part::Wildcard& part) {
@@ -145,12 +162,12 @@ namespace part {
 void to_json(nlohmann::json& j, const Part& part) {
     part.visit([&j](const auto& variant) { to_json(j, variant); });
     j["type"] = part.visit(
-        [](const auto& variant) { return std::decay_t<decltype(variant)>::code_name; });
+        [](const auto& variant) { return variant.code_name; });
 }
 
 void to_json(nlohmann::json& j, const SpannedPart& part) {
     to_json(j, part.part());
-    //to_json(part.span(), j["span"]);
+    to_json(j["span"], part.span());
 }
 
 }  // namespace wr22::regex_parser::regex

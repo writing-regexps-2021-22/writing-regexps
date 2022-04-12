@@ -21,4 +21,18 @@ std::ostream& operator<<(std::ostream& out, NamedCaptureFlavor flavor) {
     return out;
 }
 
+void to_json(nlohmann::json& j, NamedCaptureFlavor flavor) {
+    switch (flavor) {
+        case NamedCaptureFlavor::Angles:
+            j = "angles";
+            break;
+        case NamedCaptureFlavor::Apostrophes:
+            j = "Apostrophes";
+            break;
+        case NamedCaptureFlavor::AnglesWithP:
+            j = "angles_with_p";
+            break;
+    }
+}
+
 }  // namespace wr22::regex_parser::regex
