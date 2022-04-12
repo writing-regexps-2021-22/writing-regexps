@@ -1,5 +1,9 @@
 # Communication Interface Specification v 0.1.0
 
+***NOTE:*** this document is a preliminary draft of what is going to be a specification.
+Many details are still missing and no examples have been provided yet. This is going
+to be corrected soon.
+
 ## Common Definitions And Convention
 1. **Backend** is the program that implements processing of regular expressions and provides
    a software interface to execute these operations on given data and obtain the result of their
@@ -20,7 +24,7 @@
 7. Unless explicitly specified otherwise, the described values cannot be null.
 8. **Bold** text is used to introduce new terms. *Italic* text is used to refer to already defined terms.
 
-## Communication Interface 
+## Communication Interface
 The communication interface is defined in this section.  The *backend* listens on the TCP network
 socket bound to the IPv4 address `127.0.0.1` to the port `6666` and accepts incoming connections
 from the *frontend*. After the TCP connection has been established, the communication between
@@ -95,7 +99,7 @@ This and other object types are defined below.
            for details. Other fields in the tree node object:
             1. `inner` — a *spanned tree node*, which represents the content of the group.
             2. `capture` — a *capture* object, which describes the capturing behavior of this group.
-        4. `literal` — a literal character (e.g. "`a`"). 
+        4. `literal` — a literal character (e.g. "`a`").
            Other fields in the *tree node* object:
             1. `char` — a *JSON string* containing 1 character (Unicode codepoint).
                This codepoint is the literal character in the regular expression.
