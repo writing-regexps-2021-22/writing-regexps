@@ -55,13 +55,13 @@ with either one or both the following fields:
    that prevented the execution of the requested operation. Must be present if and only
    if a *service error* has occurred. This field is referred to as **the response service error object**.
 
-If present, the `error` field is an **error object**. The latter is defined as a *JSON object*
+If present, the `error` field is an **error** object. The latter is defined as a *JSON object*
 with the following fields:
 
-1. `code` — A *JSON string* that represents the error code. Must always be present.
+1. `code` — A *JSON string* that represents the *error code*. Must always be present.
 2. `data` — A *JSON value* of the error-specific format. The precise format is defined together with
-   the definition of the corresponding error code. If no definition of the `data` field is given for an
-   error code, this field must be absent if such error is returned.
+   the definition of the corresponding *error code*. If no definition of the `data` field is given for an
+   *error code*, this field must be absent if such error is returned.
 
 The list of defined request paths is as follows:
 
@@ -77,53 +77,86 @@ Allowed HTTP methods: `POST`.
 
 1. `regex` — A JSON string that represents the regular expression to parse. Must always be present.
 
-*Response payload* is a *spanned tree node* object corresponding to the root parse tree node.
+*Response payload* is a *parse result* object representing the result of the parse operation.
 This and other object types are defined below.
 
-(TODO: check this)
 
-1. **Spanned tree node** is a *JSON object* with the following fields:
+1. **Parse result** is a *JSON object*. Two fields are possible, and exactly one must be present:
+    1. `parse_tree` — a *spanned tree node* object corresponding to the root parse tree node,
+       if the regular expression was successfully parsed.
+    2. `parse_error` — an *error* object describing the parse error if it has occurred.
+       The possible *error codes* are defined as follows:
+        1. "`expected_end`" — if a regular expression was expected to end at a certain position but did not.
+           It is unspecified when exactly this error will be raised, and it may be subject to change.
+           Error `data` is a *JSON object* with the following fields:
+            1. `char` — a *JSON string* encoding exactly 1 character (Unicode codepoint). This is the character
+               that was encountered instead of the end of string (that is, `char = regex[position]`).
+            2. `position` — a *JSON number* representing the 0-based index of the character
+               right after the expected end of the regular expression.
+        2. "`unexpected_char`" — if a certain character in the regular expression is not allowable
+           at its position.
+           Error `data` is a *JSON object* with the following fields:
+            1. `char` — a *JSON string* encoding exactly 1 character (Unicode codepoint). This is the
+               first character that was encountered but not allowable.
+            2. `position` — a *JSON number* representing the 0-based index of the first character
+               that was not allowable.
+            3. `expected` — a *JSON string* giving a hint on what kinds of characters were expected/allowable
+               at this position. This string does not have a defined format and should only be used
+               to help the developers or users to debug their parse error. This may be subject to change
+               in further revisions of the specification.
+        3. "`unexpected_end`" — if a regular expression ended abruptly, at a position where it was not
+           expected to.
+           Error `data` is a *JSON object* with the following fields:
+            1. `position` — a *JSON number* representing the 0-based index of the character that would
+               be located right after the end. Effectively, this is the length of the regular expression
+               string.
+            2. `expected` — a *JSON string* giving a hint on what kinds of characters were expected
+               at this position. This string does not have a defined format and should only be used
+               to help the developers or users to debug their parse error. This may be subject to change
+               in further revisions of the specification.
+2. **Spanned tree node** is a *JSON object* with the following fields:
     1. `span` — a *span*. Determines the starting and ending positions of the current
        parse tree node in the regular expression string.
     2. All fields from a *tree node* object.
-2. **Tree node** is a *JSON object* with the following fields:
+3. **Tree node** is a *JSON object* with the following fields:
     1. `type` — a *JSON string* that determines the type of the tree node.
-    2. Other fields depdending on `type`. The following values of `type` are defined:
-        1. `alternatives` — a list of alternatives (e.g. "`a|b|c`" in the regex).
+    2. Other fields depdending on `type`. The following values of `type` are defined (new fields may be
+       added in further revisions of the specification):
+        1. "`alternatives`" — a list of alternatives (e.g. "`a|b|c`" in the regex).
            Other fields in the *tree node* object:
             1. `alternatives` — a *JSON array* of *spanned tree node* objects. Each of them represents
                one alternative.
-        2. `empty` — an empty tree node (matches the empty string). No other *tree node* fields are defined.
-        3. `group` — a group (e.g. "`(foo)`" in the regex).
+        2. "`empty`" — an empty tree node (matches the empty string). No other *tree node* fields are defined.
+        3. "`group`" — a group (e.g. "`(foo)`" in the regex).
            May be capturing or non-capturing, see [the reference documentation][cpp.wr22.group]
            for details. Other fields in the tree node object:
             1. `inner` — a *spanned tree node*, which represents the content of the group.
             2. `capture` — a *capture* object, which describes the capturing behavior of this group.
-        4. `literal` — a literal character (e.g. "`a`").
+        4. "`literal`" — a literal character (e.g. "`a`").
            Other fields in the *tree node* object:
             1. `char` — a *JSON string* containing 1 character (Unicode codepoint).
                This codepoint is the literal character in the regular expression.
-        5. `optional`, `plus`, `star` — expressions quantified with `?`, `+` and `*` respectively.
+        5. "`optional`", "`plus`", "`star`" — expressions quantified with "`?`", "`+`" and "`*`" respectively.
            Other fields in the *tree node* object:
             1. `inner` — a *spanned tree node* representing the expression under the quantifier.
-        6. `sequence` — a collection of several subexpressions following each other sequentially
+        6. "`sequence`" — a collection of several subexpressions following each other sequentially
            (e.g. "`[a-z].abc+`" is a sequence of "`[a-z]`", "`.`", "`a`", "`b`" and "`c+`").
            Other fields in the *tree node* object:
             1. `items` — a *JSON array* of *spanned tree nodes*, each representing a subexpression.
-        7. `wildcard` — a wildcard symbol ("`.`" in the regex). No other *tree node* fields are defined.
-3. **Capture** is a *JSON object* describing the capturing behavior of a group with the following fields:
+        7. "`wildcard`" — a wildcard symbol ("`.`" in the regex). No other *tree node* fields are defined.
+4. **Capture** is a *JSON object* describing the capturing behavior of a group with the following fields:
     1. `type` — a *JSON string* that determines the type of the capture.
     2. Other fields depdending on `type`. The following values of `type` are defined:
-        1. `index` — group capturing by index (e.g. "`(foo)`"). No other *capture* fields are defined.
-        2. `none` — non-capturing group (e.g. "`(?:foo)`"). No other *capture* fields are defined.
-        3. `name` — group capturing by name (e.g. "`(?P<name>foo)`"). Other fields in the *capture* object:
+        1. "`index`" — group capturing by index (e.g. "`(foo)`"). No other *capture* fields are defined.
+        2. "`none`" — non-capturing group (e.g. "`(?:foo)`"). No other *capture* fields are defined.
+        3. "`name`" — group capturing by name (e.g. "`(?P<name>foo)`"). Other fields in the *capture* object:
             1. `name` — a *JSON string* representing the name of the capture.
             2. `flavor` — a *JSON string* representing the syntax variant used in the
                regular expression to declare a group capturing by name. Possible values:
-                1. `apostrophes` — corresponds to "`(?'name'data)`".
-                2. `angles` — corresponds to "`(?<name>data)`".
-                2. `angles_with_p` — corresponds to "`(?P<name>data)`".
-4. **Span** is a *JSON array* of exactly two *JSON numbers*. Each number is an integer, and the second one
+                1. "`apostrophes`" — corresponds to "`(?'name'data)`".
+                2. "`angles`" — corresponds to "`(?<name>data)`".
+                2. "`angles_with_p`" — corresponds to "`(?P<name>data)`".
+5. **Span** is a *JSON array* of exactly two *JSON numbers*. Each number is an integer, and the second one
    is greater than or equal to the first one. These numbers represent the starting and ending positions
    of a parse tree node in the regular expression string: the first number is the 0-based index of the first
    Unicode character (codepoint) covered by this tree node, and the second number is the 0-based index of the
@@ -131,10 +164,87 @@ This and other object types are defined below.
    is excluded. For example, in a regex "`a(b|c)d`" the group "`(b|c)`" has the span `[1, 6]`, because
    the index of "`(`" is 1, and the index of "`d`" (the character right after the group) is 6.
 
-### Errors
-TODO
-
 ## Service Errors
-TODO
+*Service errors* are represented by *error* objects. The following *error codes* are defined for
+*service errors*:
+
+(TODO)
+
+## Examples
+
+### Successful Parsing
+Request payload:
+```json
+{
+    "regex": "(?P<group>a|b)c"
+}
+```
+
+Response JSON:
+```json
+{
+    "data": {
+        "parse_tree": {
+            "span": [0, 15],
+            "type": "sequence",
+            "items": [
+                {
+                    "span": [0, 14],
+                    "type": "group",
+                    "capture": {
+                        "type": "name",
+                        "name": "group",
+                        "flavor": "angles_with_p"
+                    },
+                    "inner": {
+                        "span": [10, 13],
+                        "type": "alternatives",
+                        "alternatives": [
+                            {
+                                "span": [10, 11],
+                                "type": "literal",
+                                "char": "a",
+                            },
+                            {
+                                "span": [12, 13],
+                                "type": "literal",
+                                "char": "b",
+                            }
+                        ]
+                    }
+                },
+                {
+                    "span": [14, 15],
+                    "type": "literal",
+                    "char": "c"
+                }
+            ]
+        }
+    }
+}
+```
+
+### Parse Error
+Request payload:
+```json
+{
+    "regex": "(text"
+}
+```
+
+Response JSON:
+```json
+{
+    "data": {
+        "parse_error": {
+            "type": "unexpected_end",
+            "data": {
+                "position": 5,
+                "expected": "<a description that a closing parenthesis was expected>"
+            }
+        }
+    }
+}
+```
 
 [cpp.wr22.group]: https://writing-regexps-2021-22.github.io/docs/regex-parser/structwr22_1_1regex__parser_1_1regex_1_1part_1_1Group.html
