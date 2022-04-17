@@ -89,14 +89,14 @@ This and other object types are defined below.
         1. "`expected_end`" — if a regular expression was expected to end at a certain position but did not.
            It is unspecified when exactly this error will be raised, and it may be subject to change.
            Error `data` is a *JSON object* with the following fields:
-            1. `char` — a *JSON string* encoding exactly 1 character (Unicode codepoint). This is the character
+            1. `char_got` — a *JSON string* encoding exactly 1 character (Unicode codepoint). This is the character
                that was encountered instead of the end of string (that is, `char = regex[position]`).
             2. `position` — a *JSON number* representing the 0-based index of the character
                right after the expected end of the regular expression.
         2. "`unexpected_char`" — if a certain character in the regular expression is not allowable
            at its position.
            Error `data` is a *JSON object* with the following fields:
-            1. `char` — a *JSON string* encoding exactly 1 character (Unicode codepoint). This is the
+            1. `char_got` — a *JSON string* encoding exactly 1 character (Unicode codepoint). This is the
                first character that was encountered but not allowable.
             2. `position` — a *JSON number* representing the 0-based index of the first character
                that was not allowable.

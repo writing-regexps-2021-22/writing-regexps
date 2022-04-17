@@ -1,17 +1,18 @@
 // wr22
+#include <wr22/regex_parser/parser/errors.hpp>
+#include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_server/service_error.hpp>
 #include <wr22/regex_server/service_error/internal_error.hpp>
-#include <wr22/regex_server/service_error/not_implemented.hpp>
 #include <wr22/regex_server/service_error/invalid_request_json.hpp>
 #include <wr22/regex_server/service_error/invalid_request_json_structure.hpp>
 #include <wr22/regex_server/service_error/invalid_utf8.hpp>
+#include <wr22/regex_server/service_error/not_implemented.hpp>
 #include <wr22/regex_server/webserver.hpp>
-#include <wr22/regex_parser/parser/regex.hpp>
-#include <wr22/regex_parser/parser/errors.hpp>
 
 // stl
-#include <type_traits>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 
 // boost
 #include <boost/locale/encoding_utf.hpp>
@@ -25,12 +26,21 @@
 // spdlog
 #include <spdlog/spdlog.h>
 
+// fmt
+#include <fmt/format.h>
+
 namespace wr22::regex_server {
 
 namespace {
     /// Pointer to member of `Webserver`.
     using HandlerPtr =
         nlohmann::json (Webserver::*)(const crow::request& request, crow::response& response);
+
+    std::string encode_char_utf8(char32_t c) {
+        auto begin = &c;
+        auto end = begin + 1;
+        return boost::locale::conv::utf_to_utf<char>(begin, end);
+    }
 
     void write_success_response(crow::response& response, nlohmann::json data) {
         auto response_json = nlohmann::json::object();
@@ -81,12 +91,18 @@ namespace {
         } catch (const err::ExpectedEnd& e) {
             error_code = "expected_end";
             error_data["position"] = e.position();
-            error_data["char_got"] = e.char_got();
+            error_data["char_got"] = encode_char_utf8(e.char_got());
         } catch (const err::UnexpectedChar& e) {
             error_code = "unexpected_char";
             error_data["position"] = e.position();
-            error_data["char_got"] = e.char_got();
+            error_data["char_got"] = encode_char_utf8(e.char_got());
             error_data["expected"] = e.expected();
+        } catch (const err::UnexpectedEnd& e) {
+            error_code = "unexpected_end";
+            error_data["position"] = e.position();
+            error_data["expected"] = e.expected();
+        } catch (const err::ParseError& e) {
+            throw std::runtime_error(fmt::format("Unknown parse error: {}", e.what()));
         }
 
         // If here, an error has occurred.
