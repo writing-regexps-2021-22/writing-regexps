@@ -168,7 +168,24 @@ This and other object types are defined below.
 *Service errors* are represented by *error* objects. The following *error codes* are defined for
 *service errors*:
 
-(TODO)
+1. "`internal_error`" — due to a bug in the backend, it was unable to handle the request.
+   HTTP status code 500 (Internal Server Error) is returned.
+   `data` field is absent.
+2. "`invalid_request_json`" — the request payload was not a valid JSON document.
+   HTTP status code 400 (Bad Request) is returned.
+   `data` field is absent.
+3. "`invalid_request_json_structure`" — the request payload was valid JSON, but its structure did not
+   conform to this specification (e.g. data types were wrong or required fields were missing).
+   HTTP status code 400 (Bad Request) is returned.
+   `data` field is absent.
+4. "`invalid_utf8`" — some strings in the request payload were not correctly UTF-8 encoded. It
+   is unspecified when this error is raised in place of "`invalid_request_json`", since the latest
+   JSON specification requires the JSON document to be UTF-8 encoded.
+   HTTP status code 400 (Bad Request) is returned.
+   `data` field is absent.
+5. "`not_implemented`" — the requested operation or its part is not implemented on the backend.
+   HTTP status code 501 (Not Implemented) is returned.
+   `data` field is absent.
 
 ## Examples
 
@@ -237,12 +254,27 @@ Response JSON:
 {
     "data": {
         "parse_error": {
-            "type": "unexpected_end",
+            "code": "unexpected_end",
             "data": {
                 "position": 5,
                 "expected": "<a description that a closing parenthesis was expected>"
             }
         }
+    }
+}
+```
+
+### Service Error
+Request payload:
+```json
+[1, 2, 3]
+```
+
+Response JSON:
+```json
+{
+    "error": {
+        "code": "invalid_request_json_structure"
     }
 }
 ```
