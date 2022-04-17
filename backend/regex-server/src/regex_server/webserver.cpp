@@ -17,7 +17,7 @@
 #include <boost/locale/encoding_utf.hpp>
 
 // crow
-#include <crow_all.h>
+#include <crow.h>
 
 // nlohmann
 #include <nlohmann/json.hpp>
