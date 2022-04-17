@@ -1,9 +1,5 @@
 # Communication Interface Specification v 0.1.0
 
-***NOTE:*** this document is a preliminary draft of what is going to be a specification.
-Many details are still missing and no examples have been provided yet. This is going
-to be corrected soon.
-
 ## Common Definitions And Convention
 1. **Backend** is the program that implements processing of regular expressions and provides
    a software interface to execute these operations on given data and obtain the result of their
