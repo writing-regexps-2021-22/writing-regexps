@@ -3,6 +3,7 @@
 // wr22
 #include <nlohmann/json_fwd.hpp>
 #include <wr22/regex_parser/regex/capture.hpp>
+#include <wr22/regex_parser/regex/character_class_data.hpp>
 #include <wr22/regex_parser/span/span.hpp>
 #include <wr22/regex_parser/utils/adt.hpp>
 #include <wr22/regex_parser/utils/box.hpp>
@@ -148,6 +149,17 @@ namespace part {
         static constexpr const char* code_name = "wildcard";
     };
     void to_json(nlohmann::json& j, const Wildcard& part);
+
+    /// A regex part specifying a character class (e.g. `[a-z_]`).
+    struct CharacterClass {
+        explicit CharacterClass(CharacterClassData data);
+        bool operator==(const CharacterClass& rhs) const = default;
+        static constexpr const char* code_name = "character_class";
+
+        /// The list of character ranges.
+        CharacterClassData data;
+    };
+    void to_son(nlohmann::json& j, const CharacterClass& part);
 
     using Adt = utils::
         Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star, Wildcard>;
