@@ -22,14 +22,13 @@ std::string to_utf8(char32_t char_utf32) {
 }
 
 void to_utf8_append(std::string& buffer, const std::u32string_view& string_utf32) {
-    for (auto char_utf32 : string_utf32) {
-        to_utf8_append(buffer, char_utf32);
-    }
+    auto output = std::back_inserter(buffer);
+    to_utf8_write(output, string_utf32);
 }
 
 void to_utf8_append(std::string& buffer, char32_t char_utf32) {
-    auto codepoint = static_cast<boost::locale::utf::code_point>(char_utf32);
-    boost::locale::utf::utf_traits<char>::encode(codepoint, std::back_inserter(buffer));
+    auto output = std::back_inserter(buffer);
+    to_utf8_write(output, char_utf32);
 }
 
 std::u32string from_utf8(const std::string_view& string_utf8) {
@@ -37,17 +36,8 @@ std::u32string from_utf8(const std::string_view& string_utf8) {
 }
 
 void from_utf8_append(std::u32string& buffer, const std::string_view& string_utf8) {
-    auto it = string_utf8.begin();
-    auto end = string_utf8.end();
-    while (it != end) {
-        auto codepoint = boost::locale::utf::utf_traits<char>::decode(it, string_utf8.end());
-        if (!boost::locale::utf::is_valid_codepoint(codepoint)) {
-            throw boost::locale::conv::conversion_error{};
-        }
-        auto char_utf32 = static_cast<char32_t>(codepoint);
-        buffer.push_back(char_utf32);
-    }
-
+    auto output = std::back_inserter(buffer);
+    from_utf8_write(output, string_utf8);
 }
 
 }  // namespace wr22::unicode

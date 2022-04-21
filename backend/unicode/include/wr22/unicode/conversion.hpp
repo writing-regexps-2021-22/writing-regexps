@@ -4,6 +4,9 @@
 #include <string>
 #include <string_view>
 
+// boost
+#include <boost/locale/encoding_utf.hpp>
+
 namespace wr22::unicode {
 
 /// Convert a `u32string` or a `u32string_view` to a `string`.
@@ -65,6 +68,50 @@ void to_utf8_append(std::string& buffer, const std::u32string_view& string_utf32
 /// ```
 void to_utf8_append(std::string& buffer, char32_t char_utf32);
 
+/// Convert a `char32_t` to a `string`.
+/// Equivalent to `to_utf8`, but writes the resulting string
+/// to an output iterator instead of returning a new string.
+///
+/// If not sure which function to choose, start with `to_utf8` or `to_utf8_append` instead
+/// of `to_utf8_write`.
+///
+/// Usage example:
+/// ```cpp
+/// std::cout << "2 ";
+/// char32_t times = U'×';
+/// auto iter = std::ostream_iterator<char>(std::cout);
+/// to_utf8_write(iter, times);
+/// std::cout << " 2 = 4";
+/// // Stdout: "2 × 2 = 4"
+/// ```
+template <typename Iter>
+void to_utf8_write(Iter& output, char32_t char_utf32) {
+    auto codepoint = static_cast<boost::locale::utf::code_point>(char_utf32);
+    boost::locale::utf::utf_traits<char>::encode(codepoint, output);
+}
+
+/// Convert a `u32string` or a `u32string_view` to a `string`.
+/// Equivalent to `to_utf8`, but writes the resulting string
+/// to an output iterator instead of returning a new string.
+///
+/// If not sure which function to choose, start with `to_utf8` or `to_utf8_append` instead
+/// of `to_utf8_write`.
+///
+/// Usage example:
+/// ```cpp
+/// std::cout << "Hello in Russian is ";
+/// std::u32string rus_hello = U"Привет";
+/// auto iter = std::ostream_iterator<char>(std::cout);
+/// to_utf8_write(iter, rus_hello);
+/// // Stdout: "Hello in Russian is Привет"
+/// ```
+template <typename Iter>
+void to_utf8_write(Iter& output, const std::u32string_view& string_utf32) {
+    for (auto char_utf32 : string_utf32) {
+        to_utf8_write(output, char_utf32);
+    }
+}
+
 /// Convert a `string` or a `string_view` to a `u32string`.
 ///
 /// @throws `boost::locale::utf::conversion_error` if `string_utf8`
@@ -97,5 +144,37 @@ std::u32string from_utf8(const std::string_view& string_utf8);
 /// assert(report == U"Pressure sensor reading is 5 atm");
 /// ```
 void from_utf8_append(std::u32string& buffer, const std::string_view& string_utf8);
+
+/// Convert a `string` or a `string_view` to a `u32string`.
+/// Equivalent to `from_utf8`, but writes the resulting string
+/// into an output iterator.
+///
+/// If not sure which function to choose, start with `from_utf8` or `from_utf8_append` instead
+/// of `from_utf8_write`.
+///
+/// @throws `boost::locale::utf::conversion_error` if `string_utf8`
+/// contains invalid UTF-8.
+///
+/// Usage example:
+/// ```cpp
+/// std::vector<char32_t> codepoints;
+/// std::string hello = "Hello";
+/// from_utf8_write(std::back_inserter(codepoints), hello);
+/// assert(codepoints == {U'H', U'e', U'l', U'l', U'o'});
+/// ```
+template <typename Iter>
+void from_utf8_write(Iter& output, const std::string_view& string_utf8) {
+    auto it = string_utf8.begin();
+    auto end = string_utf8.end();
+    while (it != end) {
+        auto codepoint = boost::locale::utf::utf_traits<char>::decode(it, string_utf8.end());
+        if (!boost::locale::utf::is_valid_codepoint(codepoint)) {
+            throw boost::locale::conv::conversion_error{};
+        }
+        auto char_utf32 = static_cast<char32_t>(codepoint);
+        *output = char_utf32;
+        ++output;
+    }
+}
 
 }  // namespace wr22::unicode
