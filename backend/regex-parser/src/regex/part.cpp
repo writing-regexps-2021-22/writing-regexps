@@ -1,6 +1,6 @@
 // wr22
-#include <wr22/regex_parser/span/span.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
+#include <wr22/regex_parser/span/span.hpp>
 #include <wr22/unicode/conversion.hpp>
 
 // STL
@@ -28,6 +28,8 @@ part::Optional::Optional(SpannedPart inner) : inner(utils::Box(std::move(inner))
 part::Plus::Plus(SpannedPart inner) : inner(utils::Box(std::move(inner))) {}
 
 part::Star::Star(SpannedPart inner) : inner(utils::Box(std::move(inner))) {}
+
+part::CharacterClass::CharacterClass(CharacterClassData data) : data(std::move(data)) {}
 
 std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
     auto span = spanned_part.span();
@@ -85,6 +87,26 @@ std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
         },
         [&out, span]([[maybe_unused]] const part::Wildcard& part) {
             fmt::print(out, "Wildcard [{}]", span);
+        },
+        [&out, span](const part::CharacterClass& part) {
+            fmt::print(
+                out,
+                "CharacterClass [{}]{} {{ ",
+                span,
+                part.data.inverted ? " (inverted)" : "");
+            bool first = true;
+            for (const auto& range : part.data.ranges) {
+                if (!first) {
+                    out << ", ";
+                }
+                first = false;
+                out << '\'' << wr22::unicode::to_utf8(range.first()) << '\'';
+                if (!range.is_single_character()) {
+                    out << '-';
+                    out << '\'' << wr22::unicode::to_utf8(range.last()) << '\'';
+                }
+            }
+            out << " }";
         });
     return out;
 }
@@ -147,12 +169,17 @@ namespace part {
     void to_json(nlohmann::json& j, [[maybe_unused]] const part::Wildcard& part) {
         j = nlohmann::json::object();
     }
+
+    void to_json(nlohmann::json& j, const part::CharacterClass& part) {
+        j = nlohmann::json::object();
+        j["inverted"] = part.data.inverted;
+        j["ranges"] = part.data.ranges;
+    }
 }  // namespace part
 
 void to_json(nlohmann::json& j, const Part& part) {
     part.visit([&j](const auto& variant) { to_json(j, variant); });
-    j["type"] = part.visit(
-        [](const auto& variant) { return variant.code_name; });
+    j["type"] = part.visit([](const auto& variant) { return variant.code_name; });
 }
 
 void to_json(nlohmann::json& j, const SpannedPart& part) {

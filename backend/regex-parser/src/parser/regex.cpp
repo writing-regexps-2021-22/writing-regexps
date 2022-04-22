@@ -137,27 +137,30 @@ public:
     regex::SpannedPart parse_atom() {
         auto begin = track_pos();
         std::optional<regex::SpannedPart> result;
-        auto la = lookahead_nonempty("an openning parenthesis (`(`) or a plain character");
-        if (la == U'(') {
+        auto la1 = lookahead_nonempty("an openning parenthesis (`(`) or a plain character");
+        if (la1 == U'(') {
             result = parse_group();
-        } else if (la == U'.') {
+        } else if (la1 == U'.') {
             result = parse_wildcard();
+        } else if (la1 == U'[') {
+            result = parse_char_class();
         } else {
             result = parse_char_literal();
         }
 
         // Here come quantifiers.
 
-        if (lookahead() == U'?') {
+        auto la2 = lookahead();
+        if (la2 == U'?') {
             expect_char(U'?', "a question mark denoting an optional quantifier (`?`)");
             return make_spanned(begin, regex::part::Optional(std::move(result.value())));
         }
-        if (lookahead() == U'*') {
-            expect_char(U'*', "a question mark denoting an \"at least zero\" quantifier (`*`)");
+        if (la2 == U'*') {
+            expect_char(U'*', "an asterisk denoting an \"at least zero\" quantifier (`*`)");
             return make_spanned(begin, regex::part::Star(std::move(result.value())));
         }
-        if (lookahead() == U'+') {
-            expect_char(U'+', "a question mark denoting an \"at least one\" quantifier (`+`)");
+        if (la2 == U'+') {
+            expect_char(U'+', "a plus sign denoting an \"at least one\" quantifier (`+`)");
             return make_spanned(begin, regex::part::Plus(std::move(result.value())));
         }
         return std::move(result.value());
@@ -286,6 +289,80 @@ public:
         return std::make_pair(std::move(group_name), Span::make_from_positions(begin_pos, end_pos));
     }
 
+    regex::SpannedPart parse_char_class() {
+        using regex::CharacterRange;
+
+        auto begin = track_pos();
+        expect_char(U'[', "an opening bracket");
+
+        bool inverted = false;
+        std::vector<CharacterRange> ranges;
+
+        enum class State {
+            Initial,
+            Inverted,
+            Normal,
+            MidRange,
+        };
+        auto state = State::Initial;
+        std::optional<char32_t> current_char = std::nullopt;
+
+        while (true) {
+            auto c = next_char_nonempty(
+                "a character, a character range, or a closing bracket (']')");
+            if (c == U'^' && state == State::Initial) {
+                inverted = true;
+                state = State::Inverted;
+            } else if (c == U']') {
+                if (state == State::Initial || state == State::Inverted) {
+                    current_char = c;
+                    state = State::Normal;
+                } else if (state == State::MidRange) {
+                    // `current_char` must have value if the state is MidRange.
+                    ranges.push_back(CharacterRange::from_single_character(current_char.value()));
+                    ranges.push_back(CharacterRange::from_single_character(U'-'));
+                    current_char = std::nullopt;
+                    state = State::Normal;
+                    break;
+                } else {
+                    if (current_char.has_value()) {
+                        ranges.push_back(CharacterRange::from_single_character(current_char.value()));
+                    }
+                    current_char = std::nullopt;
+                    state = State::Normal;
+                    break;
+                }
+            } else if (c == U'-') {
+                if (current_char.has_value()) {
+                    state = State::MidRange;
+                } else {
+                    current_char = c;
+                    state = State::Normal;
+                }
+            } else {
+                if (state == State::MidRange) {
+                    // `current_char` must have value if the state is MidRange.
+                    ranges.push_back(CharacterRange::from_endpoints(current_char.value(), c));
+                    current_char = std::nullopt;
+                } else {
+                    if (current_char.has_value()) {
+                        ranges.push_back(
+                            CharacterRange::from_single_character(current_char.value()));
+                    }
+                    current_char = c;
+                }
+                state = State::Normal;
+            }
+        }
+
+        return make_spanned(
+            begin,
+            regex::part::CharacterClass(regex::CharacterClassData{
+                .ranges = std::move(ranges),
+                .inverted = inverted,
+            }));
+    }
+
 private:
     /// Peek the next character, if any, without consuming it.
     ///
@@ -321,6 +398,15 @@ private:
         ++m_iter;
         ++m_pos;
         return c;
+    }
+
+    /// Peek the next character, and consume it.
+    ///
+    /// @returns the next character from the input.
+    ///
+    /// @throws UnexpectedEnd if the end of input has been reached.
+    char32_t next_char_nonempty(std::string_view expected) {
+        return next_char_validated([]([[maybe_unused]] auto c) { return true; }, expected);
     }
 
     /// Peek the next character, validate it and consume it.
@@ -378,7 +464,7 @@ private:
     ///
     /// Helper function.
     static bool can_start_atom(char32_t c) {
-        return c == '(' || c == '.' || is_valid_for_char_literal(c);
+        return c == '(' || c == '.' || c == '[' || is_valid_for_char_literal(c);
     }
 
     /// Check if an atom can start with a given character.

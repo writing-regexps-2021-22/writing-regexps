@@ -159,10 +159,10 @@ namespace part {
         /// The list of character ranges.
         CharacterClassData data;
     };
-    void to_son(nlohmann::json& j, const CharacterClass& part);
+    void to_json(nlohmann::json& j, const CharacterClass& part);
 
     using Adt = utils::
-        Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star, Wildcard>;
+        Adt<Empty, Literal, Alternatives, Sequence, Group, Optional, Plus, Star, Wildcard, CharacterClass>;
 }  // namespace part
 
 /// A part of a regular expression and its AST node type.

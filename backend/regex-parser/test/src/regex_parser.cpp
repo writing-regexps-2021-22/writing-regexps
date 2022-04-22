@@ -21,6 +21,8 @@ using wr22::regex_parser::parser::parse_regex;
 using wr22::regex_parser::parser::errors::ExpectedEnd;
 using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
+using wr22::regex_parser::regex::CharacterClassData;
+using wr22::regex_parser::regex::CharacterRange;
 using wr22::regex_parser::regex::NamedCaptureFlavor;
 using wr22::regex_parser::regex::SpannedPart;
 using wr22::regex_parser::span::Span;
@@ -425,4 +427,297 @@ TEST_CASE("Sequences with groups", "[regex]") {
                     part::Group(capture::Index(), lit_char(U'b', 2)),
                     Span::make_with_length(1, 3)))),
             whole(4)));
+}
+
+TEST_CASE("Character classes") {
+    CHECK(
+        parse_regex(U"[abc]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'a'),
+                        CharacterRange::from_single_character(U'b'),
+                        CharacterRange::from_single_character(U'c'),
+                    },
+                .inverted = false,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[^abc]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'a'),
+                        CharacterRange::from_single_character(U'b'),
+                        CharacterRange::from_single_character(U'c'),
+                    },
+                .inverted = true,
+            }),
+            whole(6)));
+    CHECK(
+        parse_regex(U"[.]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'.'),
+                    },
+                .inverted = false,
+            }),
+            whole(3)));
+    CHECK(
+        parse_regex(U"[^-a]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'-'),
+                        CharacterRange::from_single_character(U'a'),
+                    },
+                .inverted = true,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(3)));
+    CHECK(
+        parse_regex(U"[--]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'-'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(4)));
+    CHECK(
+        parse_regex(U"[^--]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'-'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = true,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[-a-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'-'),
+                        CharacterRange::from_single_character(U'a'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[^-a-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'-'),
+                        CharacterRange::from_single_character(U'a'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = true,
+            }),
+            whole(6)));
+    CHECK(
+        parse_regex(U"[a-z]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U'a', U'z'),
+                    },
+                .inverted = false,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[^a-z]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U'a', U'z'),
+                    },
+                .inverted = true,
+            }),
+            whole(6)));
+    CHECK(
+        parse_regex(U"[a-z0-9_-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U'a', U'z'),
+                        CharacterRange::from_endpoints(U'0', U'9'),
+                        CharacterRange::from_single_character(U'_'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(10)));
+    CHECK(
+        parse_regex(U"[]a-z0-9_-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U']'),
+                        CharacterRange::from_endpoints(U'a', U'z'),
+                        CharacterRange::from_endpoints(U'0', U'9'),
+                        CharacterRange::from_single_character(U'_'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(11)));
+    CHECK(
+        parse_regex(U"[^]a-z0-9_-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U']'),
+                        CharacterRange::from_endpoints(U'a', U'z'),
+                        CharacterRange::from_endpoints(U'0', U'9'),
+                        CharacterRange::from_single_character(U'_'),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = true,
+            }),
+            whole(12)));
+    CHECK(
+        parse_regex(U"[]-z]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U']', U'z'),
+                    },
+                .inverted = false,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[^]-z]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U']', U'z'),
+                    },
+                .inverted = true,
+            }),
+            whole(6)));
+    CHECK(
+        parse_regex(U"[[[[-]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'['),
+                        CharacterRange::from_single_character(U'['),
+                        CharacterRange::from_single_character(U'['),
+                        CharacterRange::from_single_character(U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(6)));
+    CHECK(
+        parse_regex(U"[[[[-[]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U'['),
+                        CharacterRange::from_single_character(U'['),
+                        CharacterRange::from_endpoints(U'[', U'['),
+                    },
+                .inverted = false,
+            }),
+            whole(7)));
+    CHECK(
+        parse_regex(U"[+--]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U'+', U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[^+--]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U'+', U'-'),
+                    },
+                .inverted = true,
+            }),
+            whole(6)));
+    CHECK(
+        parse_regex(U"[---]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_endpoints(U'-', U'-'),
+                    },
+                .inverted = false,
+            }),
+            whole(5)));
+    CHECK(
+        parse_regex(U"[][]")
+        == SpannedPart(
+            part::CharacterClass(CharacterClassData{
+                .ranges =
+                    {
+                        CharacterRange::from_single_character(U']'),
+                        CharacterRange::from_single_character(U'['),
+                    },
+                .inverted = false,
+            }),
+            whole(4)));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"["),
+        UnexpectedEnd,
+        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 1; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"[]"),
+        UnexpectedEnd,
+        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 2; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"[-"),
+        UnexpectedEnd,
+        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 2; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"[abc"),
+        UnexpectedEnd,
+        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 4; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"[abc"),
+        UnexpectedEnd,
+        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 4; }));
 }

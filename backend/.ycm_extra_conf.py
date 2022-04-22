@@ -50,7 +50,7 @@ flags = [
     # a "-std=<something>".
     # For a C project, you would set this to something like 'c99' instead of
     # 'c++11'.
-    "-std=c++11",
+    "-std=c++20",
     # ...and the same thing goes for the magic -x option which specifies the
     # language that the files to be compiled are written in. This is mostly
     # relevant for c++ headers.
@@ -71,22 +71,21 @@ flags = [
     "include",
 ]
 
+def DirectoryOfThisScript():
+    return os.path.dirname(os.path.abspath(__file__))
+
 # Set this to the absolute path to the folder (NOT the file!) containing the
 # compile_commands.json file to use that instead of 'flags'. See here for
 # more details: http://clang.llvm.org/docs/JSONCompilationDatabase.html
 #
 # Most projects will NOT need to set this to anything; you can just change the
 # 'flags' list of compilation flags. Notice that YCM itself uses that approach.
-compilation_database_folder = "build"
+compilation_database_folder = os.path.join(DirectoryOfThisScript(), "build")
 
 if compilation_database_folder:
     database = ycm_core.CompilationDatabase(compilation_database_folder)
 else:
     database = None
-
-
-def DirectoryOfThisScript():
-    return os.path.dirname(os.path.abspath(__file__))
 
 
 def MakeRelativePathsInFlagsAbsolute(flags, working_directory):
