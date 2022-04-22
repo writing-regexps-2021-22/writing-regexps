@@ -6,9 +6,6 @@
 #include <iterator>
 #include <ostream>
 
-// boost
-#include <boost/locale/utf.hpp>
-
 // fmt
 #include <fmt/core.h>
 #include <fmt/ostream.h>

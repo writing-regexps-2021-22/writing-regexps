@@ -2,6 +2,7 @@
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
+#include <wr22/unicode/conversion.hpp>
 
 // stl
 #include <optional>
@@ -9,22 +10,9 @@
 #include <string>
 #include <vector>
 
-// boost
-#include <boost/locale/encoding_utf.hpp>
-#include <boost/locale/utf.hpp>
-
 namespace wr22::regex_parser::parser {
 
 using span::Span;
-
-namespace {
-    void push_utf8(std::string& buf, char32_t unicode_char) {
-        using Traits = boost::locale::utf::utf_traits<char>;
-        Traits::encode(
-            static_cast<boost::locale::utf::code_point>(unicode_char),
-            std::back_inserter(buf));
-    }
-}  // namespace
 
 /// A regex parser.
 ///
@@ -284,14 +272,14 @@ public:
         }
 
         std::string group_name;
-        push_utf8(group_name, next_char().value());
+        wr22::unicode::to_utf8_append(group_name, next_char().value());
         while (true) {
             constexpr auto next_char_expected_msg = "a character of a capture group name";
             auto la = lookahead_nonempty(next_char_expected_msg);
             if (!is_valid_for_group_name(la)) {
                 break;
             }
-            push_utf8(group_name, next_char().value());
+            wr22::unicode::to_utf8_append(group_name, next_char().value());
         }
 
         auto end_pos = m_pos;

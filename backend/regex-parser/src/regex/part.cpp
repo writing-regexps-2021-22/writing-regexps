@@ -1,14 +1,11 @@
 // wr22
-#include "wr22/regex_parser/span/span.hpp"
-#include <boost/locale/encoding_utf.hpp>
+#include <wr22/regex_parser/span/span.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
+#include <wr22/unicode/conversion.hpp>
 
 // STL
 #include <iterator>
 #include <ostream>
-
-// boost
-#include <boost/locale/utf.hpp>
 
 // fmt
 #include <fmt/core.h>
@@ -37,10 +34,11 @@ std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
     spanned_part.part().visit(
         [&out, span](const part::Empty&) { fmt::print(out, "Empty [{}]", span); },
         [&out, span](const part::Literal& part) {
-            using utf_traits = boost::locale::utf::utf_traits<char>;
             out << '\'';
-            auto code_point = static_cast<boost::locale::utf::code_point>(part.character);
-            utf_traits::encode(code_point, std::ostream_iterator<char>(out));
+            {
+                auto it = std::ostream_iterator<char>(out);
+                wr22::unicode::to_utf8_write(it, part.character);
+            }
             out << '\'';
             fmt::print(out, " [{}]", span);
         },
@@ -105,14 +103,6 @@ span::Span SpannedPart::span() const {
     return m_span;
 }
 
-namespace {
-    std::string encode_utf32_char(char32_t c) {
-        auto begin = &c;
-        auto end = begin + 1;
-        return boost::locale::conv::utf_to_utf<char>(begin, end);
-    }
-}  // namespace
-
 namespace part {
     void to_json(nlohmann::json& j, [[maybe_unused]] const part::Empty& part) {
         j = nlohmann::json::object();
@@ -120,7 +110,7 @@ namespace part {
 
     void to_json(nlohmann::json& j, const part::Literal& part) {
         j = nlohmann::json::object();
-        j["char"] = encode_utf32_char(part.character);
+        j["char"] = wr22::unicode::to_utf8(part.character);
     }
 
     void to_json(nlohmann::json& j, const part::Alternatives& part) {

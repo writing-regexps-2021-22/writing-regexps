@@ -19,6 +19,7 @@ target_link_libraries(
     wr22-regex-parser
     PUBLIC
         fmt
+        wr22-unicode
 )
 
 if (${REGEX_PARSER_BUILD_TESTS})

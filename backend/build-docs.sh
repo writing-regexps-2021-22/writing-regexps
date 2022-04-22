@@ -24,6 +24,7 @@ if [[ -e doxygen.conf ]]; then
     cp -r --reflink=auto -- "../build/docs/$project/html/"* "$output_dir/"
     echo 'Compiling PDF documentation'
     pushd "../build/docs/$project/latex/"
+    sed -i Makefile -e 's/LATEX_CMD=pdflatex/LATEX_CMD=xelatex/'
     make
     cp --reflink=auto -- refman.pdf "$output_dir/$project-api-reference.pdf"
     popd

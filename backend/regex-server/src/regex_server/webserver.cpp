@@ -8,14 +8,12 @@
 #include <wr22/regex_server/service_error/invalid_utf8.hpp>
 #include <wr22/regex_server/service_error/not_implemented.hpp>
 #include <wr22/regex_server/webserver.hpp>
+#include <wr22/unicode/conversion.hpp>
 
 // stl
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-
-// boost
-#include <boost/locale/encoding_utf.hpp>
 
 // crow
 #include <crow.h>
@@ -35,12 +33,6 @@ namespace {
     /// Pointer to member of `Webserver`.
     using HandlerPtr =
         nlohmann::json (Webserver::*)(const crow::request& request, crow::response& response);
-
-    std::string encode_char_utf8(char32_t c) {
-        auto begin = &c;
-        auto end = begin + 1;
-        return boost::locale::conv::utf_to_utf<char>(begin, end);
-    }
 
     void write_success_response(crow::response& response, nlohmann::json data) {
         auto response_json = nlohmann::json::object();
@@ -91,11 +83,11 @@ namespace {
         } catch (const err::ExpectedEnd& e) {
             error_code = "expected_end";
             error_data["position"] = e.position();
-            error_data["char_got"] = encode_char_utf8(e.char_got());
+            error_data["char_got"] = wr22::unicode::to_utf8(e.char_got());
         } catch (const err::UnexpectedChar& e) {
             error_code = "unexpected_char";
             error_data["position"] = e.position();
-            error_data["char_got"] = encode_char_utf8(e.char_got());
+            error_data["char_got"] = wr22::unicode::to_utf8(e.char_got());
             error_data["expected"] = e.expected();
         } catch (const err::UnexpectedEnd& e) {
             error_code = "unexpected_end";
@@ -144,9 +136,8 @@ nlohmann::json Webserver::parse_handler(
         }
 
         auto regex_string = regex_json_string.get<std::string>();
-        std::u32string regex_string_utf32;
         try {
-            regex_string_utf32 = boost::locale::conv::utf_to_utf<char32_t>(regex_string);
+            auto regex_string_utf32 = wr22::unicode::from_utf8(regex_string);
             return parse_regex_to_json(regex_string_utf32);
         } catch (const boost::locale::conv::conversion_error& e) {
             throw service_error::InvalidUtf8{};
