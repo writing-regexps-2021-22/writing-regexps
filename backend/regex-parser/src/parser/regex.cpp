@@ -289,6 +289,9 @@ public:
         return std::make_pair(std::move(group_name), Span::make_from_positions(begin_pos, end_pos));
     }
 
+    /// Intermediate rule: parse a character class (e.g. [^a-z0-9_-]).
+    ///
+    /// @returns the character class AST node.
     regex::SpannedPart parse_char_class() {
         using regex::CharacterRange;
 
@@ -326,14 +329,19 @@ public:
                     break;
                 } else {
                     if (current_char.has_value()) {
-                        ranges.push_back(CharacterRange::from_single_character(current_char.value()));
+                        ranges.push_back(
+                            CharacterRange::from_single_character(current_char.value()));
                     }
                     current_char = std::nullopt;
                     state = State::Normal;
                     break;
                 }
             } else if (c == U'-') {
-                if (current_char.has_value()) {
+                if (state == State::MidRange) {
+                    ranges.push_back(CharacterRange::from_endpoints(current_char.value(), c));
+                    current_char = std::nullopt;
+                    state = State::Normal;
+                } else if (current_char.has_value()) {
                     state = State::MidRange;
                 } else {
                     current_char = c;
