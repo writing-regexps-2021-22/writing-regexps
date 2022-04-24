@@ -436,9 +436,18 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'a'),
-                        CharacterRange::from_single_character(U'b'),
-                        CharacterRange::from_single_character(U'c'),
+                        {
+                            .range = CharacterRange::from_single_character(U'a'),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'b'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'c'),
+                            .span = Span::make_single_position(3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -449,9 +458,18 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'a'),
-                        CharacterRange::from_single_character(U'b'),
-                        CharacterRange::from_single_character(U'c'),
+                        {
+                            .range = CharacterRange::from_single_character(U'a'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'b'),
+                            .span = Span::make_single_position(3),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'c'),
+                            .span = Span::make_single_position(4),
+                        },
                     },
                 .inverted = true,
             }),
@@ -462,7 +480,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'.'),
+                        {
+                            .range = CharacterRange::from_single_character(U'.'),
+                            .span = Span::make_single_position(1),
+                        },
                     },
                 .inverted = false,
             }),
@@ -473,8 +494,14 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'-'),
-                        CharacterRange::from_single_character(U'a'),
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'a'),
+                            .span = Span::make_single_position(3),
+                        },
                     },
                 .inverted = true,
             }),
@@ -485,7 +512,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(1),
+                        },
                     },
                 .inverted = false,
             }),
@@ -496,8 +526,14 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'-'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(2),
+                        },
                     },
                 .inverted = false,
             }),
@@ -508,8 +544,14 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'-'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(3),
+                        },
                     },
                 .inverted = true,
             }),
@@ -520,9 +562,18 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'-'),
-                        CharacterRange::from_single_character(U'a'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'a'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -533,9 +584,18 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'-'),
-                        CharacterRange::from_single_character(U'a'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'a'),
+                            .span = Span::make_single_position(3),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(4),
+                        },
                     },
                 .inverted = true,
             }),
@@ -546,7 +606,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U'a', U'z'),
+                        {
+                            .range = CharacterRange::from_endpoints(U'a', U'z'),
+                            .span = Span::make_with_length(1, 3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -557,7 +620,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U'a', U'z'),
+                        {
+                            .range = CharacterRange::from_endpoints(U'a', U'z'),
+                            .span = Span::make_with_length(2, 3),
+                        },
                     },
                 .inverted = true,
             }),
@@ -568,10 +634,22 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U'a', U'z'),
-                        CharacterRange::from_endpoints(U'0', U'9'),
-                        CharacterRange::from_single_character(U'_'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_endpoints(U'a', U'z'),
+                            .span = Span::make_with_length(1, 3),
+                        },
+                        {
+                            .range = CharacterRange::from_endpoints(U'0', U'9'),
+                            .span = Span::make_with_length(4, 3),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'_'),
+                            .span = Span::make_single_position(7),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(8),
+                        },
                     },
                 .inverted = false,
             }),
@@ -582,11 +660,26 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U']'),
-                        CharacterRange::from_endpoints(U'a', U'z'),
-                        CharacterRange::from_endpoints(U'0', U'9'),
-                        CharacterRange::from_single_character(U'_'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U']'),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_endpoints(U'a', U'z'),
+                            .span = Span::make_with_length(2, 3),
+                        },
+                        {
+                            .range = CharacterRange::from_endpoints(U'0', U'9'),
+                            .span = Span::make_with_length(5, 3),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'_'),
+                            .span = Span::make_single_position(8),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(9),
+                        },
                     },
                 .inverted = false,
             }),
@@ -597,11 +690,26 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U']'),
-                        CharacterRange::from_endpoints(U'a', U'z'),
-                        CharacterRange::from_endpoints(U'0', U'9'),
-                        CharacterRange::from_single_character(U'_'),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U']'),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_endpoints(U'a', U'z'),
+                            .span = Span::make_with_length(3, 3),
+                        },
+                        {
+                            .range = CharacterRange::from_endpoints(U'0', U'9'),
+                            .span = Span::make_with_length(6, 3),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'_'),
+                            .span = Span::make_single_position(9),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(10),
+                        },
                     },
                 .inverted = true,
             }),
@@ -612,7 +720,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U']', U'z'),
+                        {
+                            .range = CharacterRange::from_endpoints(U']', U'z'),
+                            .span = Span::make_with_length(1, 3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -623,7 +734,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U']', U'z'),
+                        {
+                            .range = CharacterRange::from_endpoints(U']', U'z'),
+                            .span = Span::make_with_length(2, 3),
+                        },
                     },
                 .inverted = true,
             }),
@@ -634,10 +748,22 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'['),
-                        CharacterRange::from_single_character(U'['),
-                        CharacterRange::from_single_character(U'['),
-                        CharacterRange::from_single_character(U'-'),
+                        {
+                            .range = CharacterRange::from_single_character(U'['),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'['),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'['),
+                            .span = Span::make_single_position(3),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = Span::make_single_position(4),
+                        },
                     },
                 .inverted = false,
             }),
@@ -648,9 +774,18 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U'['),
-                        CharacterRange::from_single_character(U'['),
-                        CharacterRange::from_endpoints(U'[', U'['),
+                        {
+                            .range = CharacterRange::from_single_character(U'['),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'['),
+                            .span = Span::make_single_position(2),
+                        },
+                        {
+                            .range = CharacterRange::from_endpoints(U'[', U'['),
+                            .span = Span::make_with_length(3, 3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -661,7 +796,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U'+', U'-'),
+                        {
+                            .range = CharacterRange::from_endpoints(U'+', U'-'),
+                            .span = Span::make_with_length(1, 3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -672,7 +810,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U'+', U'-'),
+                        {
+                            .range = CharacterRange::from_endpoints(U'+', U'-'),
+                            .span = Span::make_with_length(2, 3),
+                        },
                     },
                 .inverted = true,
             }),
@@ -683,7 +824,10 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_endpoints(U'-', U'-'),
+                        {
+                            .range = CharacterRange::from_endpoints(U'-', U'-'),
+                            .span = Span::make_with_length(1, 3),
+                        },
                     },
                 .inverted = false,
             }),
@@ -694,8 +838,14 @@ TEST_CASE("Character classes") {
             part::CharacterClass(CharacterClassData{
                 .ranges =
                     {
-                        CharacterRange::from_single_character(U']'),
-                        CharacterRange::from_single_character(U'['),
+                        {
+                            .range = CharacterRange::from_single_character(U']'),
+                            .span = Span::make_single_position(1),
+                        },
+                        {
+                            .range = CharacterRange::from_single_character(U'['),
+                            .span = Span::make_single_position(2),
+                        },
                     },
                 .inverted = false,
             }),

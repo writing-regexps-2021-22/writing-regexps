@@ -146,6 +146,16 @@ TEST_CASE("Span::make_with_length works", "[span]") {
     CHECK_THROWS_AS(Span::make_with_length(max, max), InvalidSpan);
 }
 
+TEST_CASE("Span::extend_right works", "[span]") {
+    CHECK(Span::make_from_positions(1, 5).extend_right(1) == Span::make_from_positions(1, 6));
+    CHECK(Span::make_from_positions(1, 5).extend_right(2) == Span::make_from_positions(1, 7));
+    CHECK(Span::make_from_positions(1, 5).extend_right(100) == Span::make_from_positions(1, 105));
+    CHECK(Span::make_empty(1234).extend_right(100) == Span::make_from_positions(1234, 1334));
+    CHECK(
+        Span::make_single_position(1234).extend_right(100)
+        == Span::make_from_positions(1234, 1335));
+}
+
 TEST_CASE("Span::length works", "[span]") {
     CHECK(Span::make_empty(0).length() == 0);
     CHECK(Span::make_empty(5).length() == 0);

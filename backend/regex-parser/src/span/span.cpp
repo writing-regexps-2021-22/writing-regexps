@@ -31,6 +31,10 @@ Span Span::make_with_length(size_t begin, size_t length) {
     return Span::make_from_positions(begin, begin + length);
 }
 
+Span Span::extend_right(size_t num_positions) const {
+    return Span::make_from_positions(m_begin, m_end + num_positions);
+}
+
 size_t Span::length() const {
     return m_end - m_begin;
 }
@@ -50,7 +54,7 @@ Span::Span(size_t begin, size_t end) : m_begin(begin), m_end(end) {
 }
 
 std::ostream& operator<<(std::ostream& out, Span span) {
-    fmt::print(out, "{}..{}", span.begin(), span.end());
+    fmt::print(out, FMT_STRING("{}..{}"), span.begin(), span.end());
     return out;
 }
 

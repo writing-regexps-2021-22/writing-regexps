@@ -59,6 +59,15 @@ public:
     /// the error message might not be precise enough.
     static Span make_with_length(size_t begin, size_t length);
 
+    /// Construct a new span that equals the current span extended to the right by a specified number of positions.
+    /// Please note that this method creates a new span and does not modify the existing one.
+    ///
+    /// Formally, `[begin..end].extend_right(n) = [begin..(end+n)]`.
+    ///
+    /// @throws InvalidSpan if `end + length` overflows `size_t`. Note that
+    /// the error message might not be precise enough.
+    Span extend_right(size_t num_positions) const;
+
     /// Get the length of the span (the number of characters covered).
     size_t length() const;
 

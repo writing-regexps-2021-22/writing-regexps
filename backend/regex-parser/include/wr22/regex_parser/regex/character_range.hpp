@@ -2,6 +2,7 @@
 
 // stl
 #include <stdexcept>
+#include <iosfwd>
 
 // fmt
 #include <fmt/core.h>
@@ -13,6 +14,9 @@ namespace wr22::regex_parser::regex {
 
 struct InvalidCharacterRange : public std::runtime_error {
     explicit InvalidCharacterRange(char32_t first, char32_t last);
+
+    char32_t first;
+    char32_t last;
 };
 
 /// A non-empty character range, possibly containing only one character.
@@ -50,6 +54,7 @@ private:
     char32_t m_last;
 };
 
+std::ostream& operator<<(std::ostream& out, const CharacterRange& range);
 void to_json(nlohmann::json& j, const CharacterRange& range);
 
 }  // namespace wr22::regex_parser::regex

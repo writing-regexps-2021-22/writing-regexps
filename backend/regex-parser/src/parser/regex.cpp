@@ -1,4 +1,5 @@
 // wr22
+#include "wr22/regex_parser/span/span.hpp"
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
@@ -294,12 +295,14 @@ public:
     /// @returns the character class AST node.
     regex::SpannedPart parse_char_class() {
         using regex::CharacterRange;
+        using regex::SpannedCharacterRange;
+        using span::Span;
 
         auto begin = track_pos();
         expect_char(U'[', "an opening bracket");
 
         bool inverted = false;
-        std::vector<CharacterRange> ranges;
+        std::vector<SpannedCharacterRange> ranges;
 
         enum class State {
             Initial,
@@ -308,59 +311,146 @@ public:
             MidRange,
         };
         auto state = State::Initial;
-        std::optional<char32_t> current_char = std::nullopt;
 
-        while (true) {
-            auto c = next_char_nonempty(
-                "a character, a character range, or a closing bracket (']')");
-            if (c == U'^' && state == State::Initial) {
-                inverted = true;
-                state = State::Inverted;
-            } else if (c == U']') {
-                if (state == State::Initial || state == State::Inverted) {
-                    current_char = c;
-                    state = State::Normal;
-                } else if (state == State::MidRange) {
-                    // `current_char` must have value if the state is MidRange.
-                    ranges.push_back(CharacterRange::from_single_character(current_char.value()));
-                    ranges.push_back(CharacterRange::from_single_character(U'-'));
-                    current_char = std::nullopt;
-                    state = State::Normal;
-                    break;
-                } else {
-                    if (current_char.has_value()) {
-                        ranges.push_back(
-                            CharacterRange::from_single_character(current_char.value()));
+        // Invariant: `current_char` has value if and only if `current_span` does.
+        // This invariant is upheld by always either assigning to both variables, or
+        // re-assigning a value to either of the variables if it already has a value.
+        std::optional<char32_t> current_char = std::nullopt;
+        std::optional<Span> current_span = std::nullopt;
+
+        try {
+            while (true) {
+                // Read the next character.
+                auto c = next_char_nonempty(
+                    "a character, a character range, or a closing bracket (']')");
+
+                // State transitions.
+                if (c == U'^' && state == State::Initial) {
+                    // The caret character indicating that the match should be inverted.
+                    inverted = true;
+                    state = State::Inverted;
+                } else if (c == U']') {
+                    if (state == State::Initial || state == State::Inverted) {
+                        // ']' as the first character is just a normal character.
+                        current_char = c;
+                        current_span = Span::make_single_position(m_pos - 1);
+                        state = State::Normal;
+                    } else if (state == State::MidRange) {
+                        // The sequence of `X-]` has occurred for some `X`. This is not
+                        // a range but instead two single characters (`X` and `-`) followed by the
+                        // character class termination.
+                        //
+                        // `current_char` and `current_span` must have values if the state is
+                        // MidRange.
+                        auto current_span_value = current_span.value();
+
+                        // `current_span` must cover the two characters `X` and `-`.
+                        assert(current_span_value.length() == 2);
+
+                        // Covers only `X`.
+                        auto first_span = Span::make_single_position(current_span_value.begin());
+                        // Covers only '-'.
+                        auto second_span = Span::make_single_position(
+                            current_span_value.begin() + 1);
+
+                        // Add the ranges to the list.
+                        ranges.push_back(SpannedCharacterRange{
+                            .range = CharacterRange::from_single_character(current_char.value()),
+                            .span = first_span,
+                        });
+                        ranges.push_back(SpannedCharacterRange{
+                            .range = CharacterRange::from_single_character(U'-'),
+                            .span = second_span,
+                        });
+
+                        current_char = std::nullopt;
+                        current_span = std::nullopt;
+                        state = State::Normal;
+                        // The character class has terminated.
+                        break;
+                    } else {
+                        // Character class termination (simple case).
+                        if (current_char.has_value()) {
+                            // If we have a character we have not yet added to the range list, fix
+                            // this.
+                            ranges.push_back(SpannedCharacterRange{
+                                .range = CharacterRange::from_single_character(current_char.value()),
+                                .span = current_span.value(),
+                            });
+                        }
+
+                        current_char = std::nullopt;
+                        current_span = std::nullopt;
+                        state = State::Normal;
+                        // The character class has terminated.
+                        break;
                     }
-                    current_char = std::nullopt;
-                    state = State::Normal;
-                    break;
-                }
-            } else if (c == U'-') {
-                if (state == State::MidRange) {
-                    ranges.push_back(CharacterRange::from_endpoints(current_char.value(), c));
-                    current_char = std::nullopt;
-                    state = State::Normal;
-                } else if (current_char.has_value()) {
-                    state = State::MidRange;
-                } else {
-                    current_char = c;
-                    state = State::Normal;
-                }
-            } else {
-                if (state == State::MidRange) {
-                    // `current_char` must have value if the state is MidRange.
-                    ranges.push_back(CharacterRange::from_endpoints(current_char.value(), c));
-                    current_char = std::nullopt;
-                } else {
-                    if (current_char.has_value()) {
-                        ranges.push_back(
-                            CharacterRange::from_single_character(current_char.value()));
+                } else if (c == U'-') {
+                    if (state == State::MidRange) {
+                        // A range `X--` for some `X`, where we have just read the second `-`.
+                        // `current_char` and `current_span` must have values if the state is
+                        // MidRange.
+
+                        // The current span is extended to account for the just read character.
+                        ranges.push_back(SpannedCharacterRange{
+                            .range = CharacterRange::from_endpoints(current_char.value(), c),
+                            .span = current_span.value().extend_right(1),
+                        });
+
+                        current_char = std::nullopt;
+                        current_span = std::nullopt;
+                        state = State::Normal;
+                    } else if (current_char.has_value()) {
+                        // The sequence `X-` for some `X`, where we have just read the `-`.
+                        // In most cases, this is the beginning of the character range, but
+                        // it will be determined later if it is the case.
+                        //
+                        // Due to the `current_char`/`current_span` relation invariant,
+                        // `current_span` must have a value.
+                        state = State::MidRange;
+
+                        // Extend the current span.
+                        current_span = current_span.value().extend_right(1);
+                    } else {
+                        /// `-` is found right after the character range started or right after
+                        /// another range. In either case, it is considered as a plain character.
+                        current_char = c;
+                        current_span = Span::make_single_position(m_pos - 1);
+                        state = State::Normal;
                     }
-                    current_char = c;
+                } else {
+                    if (state == State::MidRange) {
+                        // A range `X-Y` for some `X` and `Y` where we have just read `Y`.
+                        // `current_char` and `current_span` must have values if the state is
+                        // MidRange.
+
+                        // The current span is extended to account for the just read character.
+                        ranges.push_back(SpannedCharacterRange{
+                            .range = CharacterRange::from_endpoints(current_char.value(), c),
+                            .span = current_span.value().extend_right(1),
+                        });
+                        current_char = std::nullopt;
+                        current_span = std::nullopt;
+                    } else {
+                        // Some plain character `Y` which is not a right bound of a range.
+                        if (current_char.has_value()) {
+                            // This character follows another plain character `X` (for some `X`).
+                            // Add `X` to the list of ranges.
+                            ranges.push_back(SpannedCharacterRange{
+                                .range = CharacterRange::from_single_character(current_char.value()),
+                                .span = current_span.value(),
+                            });
+                        }
+                        current_char = c;
+                        current_span = Span::make_single_position(m_pos - 1);
+                    }
+                    state = State::Normal;
                 }
-                state = State::Normal;
             }
+        } catch (const regex::InvalidCharacterRange& e) {
+            // `current_span` must have a value whenever a character range is constructed,
+            // which means it must do so here.
+            throw errors::InvalidRange(current_span.value(), e.first, e.last);
         }
 
         return make_spanned(

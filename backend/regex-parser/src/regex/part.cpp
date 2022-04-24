@@ -100,11 +100,7 @@ std::ostream& operator<<(std::ostream& out, const SpannedPart& spanned_part) {
                     out << ", ";
                 }
                 first = false;
-                out << '\'' << wr22::unicode::to_utf8(range.first()) << '\'';
-                if (!range.is_single_character()) {
-                    out << '-';
-                    out << '\'' << wr22::unicode::to_utf8(range.last()) << '\'';
-                }
+                out << range;
             }
             out << " }";
         });

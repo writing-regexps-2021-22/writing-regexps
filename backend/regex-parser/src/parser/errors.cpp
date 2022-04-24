@@ -2,8 +2,9 @@
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/unicode/conversion.hpp>
 
-// STL
+// fmt
 #include <fmt/core.h>
+#include <fmt/ostream.h>
 
 namespace wr22::regex_parser::parser::errors {
 
@@ -55,6 +56,26 @@ char32_t UnexpectedChar::char_got() const {
 
 const std::string& UnexpectedChar::expected() const {
     return m_expected;
+}
+
+InvalidRange::InvalidRange(span::Span span, char32_t first, char32_t last)
+    : ParseError(fmt::format(
+        FMT_STRING("Invalid character range `{}..{}` at {}"),
+        wr22::unicode::to_utf8(first),
+        wr22::unicode::to_utf8(last),
+        span)),
+      m_span(span), m_first(first), m_last(last) {}
+
+span::Span InvalidRange::span() const {
+    return m_span;
+}
+
+char32_t InvalidRange::first() const {
+    return m_first;
+}
+
+char32_t InvalidRange::last() const {
+    return m_last;
 }
 
 }  // namespace wr22::regex_parser::parser::errors

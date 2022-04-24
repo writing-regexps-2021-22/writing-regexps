@@ -1,5 +1,8 @@
 #pragma once
 
+// wr22
+#include <wr22/regex_parser/span/span.hpp>
+
 // STL
 #include <exception>
 #include <stdexcept>
@@ -82,6 +85,31 @@ private:
     size_t m_position;
     char32_t m_char_got;
     std::string m_expected;
+};
+
+/// The error indicating that a character range in a character class is invalid.
+class InvalidRange : public ParseError {
+public:
+    /// Constructor.
+    ///
+    /// @param span the span of the character range considered.
+    /// @param first the first character in (left bound of) the range, as in the regex.
+    /// @param last the last character in (right bound of) the range, as in the regex.
+    InvalidRange(span::Span span, char32_t first, char32_t last);
+
+    /// Get the span of the character range. See the constructor docs for a more detailed explanation.
+    span::Span span() const;
+    /// Get the first character in the character range. See the constructor docs for a more detailed
+    /// explanation.
+    char32_t first() const;
+    /// Get the last character in the character range. See the constructor docs for a more detailed
+    /// explanation.
+    char32_t last() const;
+
+private:
+    span::Span m_span;
+    char32_t m_first;
+    char32_t m_last;
 };
 
 }  // namespace wr22::regex_parser::parser::errors
