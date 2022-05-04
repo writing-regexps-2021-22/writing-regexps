@@ -110,6 +110,15 @@ This and other object types are defined below.
                at this position. This string does not have a defined format and should only be used
                to help the developers or users to debug their parse error. This may be subject to change
                in further revisions of the specification.
+        4. "`invalid_range`" — if a character range is invalid (wrong direction, e.g. `z-a`).
+           Error `data` is a *JSON object* with the following fields:
+            1. `span` — the *span* of the range in question.
+            2. `first` — a *JSON string* consisting of exactly one character.
+               This character is the first character in the range, as written in the regex.
+               E.g. in the range `z-a` it is "`z`".
+            3. `last` — a *JSON string* consisting of exactly one character.
+               This character is the last character in the range, as written in the regex.
+               E.g. in the range `z-a` it is "`a`".
 2. **Spanned tree node** is a *JSON object* with the following fields:
     1. `span` — a *span*. Determines the starting and ending positions of the current
        parse tree node in the regular expression string.
@@ -140,6 +149,14 @@ This and other object types are defined below.
            Other fields in the *tree node* object:
             1. `items` — a *JSON array* of *spanned tree nodes*, each representing a subexpression.
         7. "`wildcard`" — a wildcard symbol ("`.`" in the regex). No other *tree node* fields are defined.
+        8. "`character_class`" — a character class (e.g. "`[^a-zA-Z_]`").
+           Other fields in the *tree node* object:
+            1. `inverted` — a *JSON boolean* that is true if the character class's match is inverted (there
+               is a `^` in the beginning of the character class) and false otherwise.
+               E.g. it is true for the character class "`[^a-z]`" but false for "`[a-z]`".
+            2. `ranges` — a *JSON array* of *spanned character range* objects representing the
+               sequence of character ranges and individual characters in this character class,
+               in the order they are specified in the regex, and together with their spans.
 4. **Capture** is a *JSON object* describing the capturing behavior of a group with the following fields:
     1. `type` — a *JSON string* that determines the type of the capture.
     2. Other fields depdending on `type`. The following values of `type` are defined:
@@ -159,6 +176,22 @@ This and other object types are defined below.
    Unicode character right after the last one covered. That is, the left end is included, and the right end
    is excluded. For example, in a regex "`a(b|c)d`" the group "`(b|c)`" has the span `[1, 6]`, because
    the index of "`(`" is 1, and the index of "`d`" (the character right after the group) is 6.
+6. **Spanned character range** is a *JSON object* describing a character range and its span in the regex.
+It has the following fields:
+    1. `range` — the *character range* object representing the range this object describes.
+    2. `span` — the *span* of this character range.
+7. **Character range** is a *JSON object* describing a single character or a range of characters
+   that appear inside a character class. It has the following fields:
+    1. `single_char` — a *JSON boolean* that is true if this character range contains only one character
+       and false otherwise.
+       This corresponds to single characters in character classes (e.g. `[a]`) or trivial ranges
+       (e.g. `[a-a]`).
+    2. `char` — a *JSON string* of exactly one character, which is the character contained in the range.
+       This field is present if and only if `single_char` is true.
+    3. `first_char` — a *JSON string* of exactly one character, which is the first character contained
+       in the range. This field is present if and only if `single_char` is false.
+    4. `last_char` — a *JSON string* of exactly one character, which is the last character contained
+       in the range. This field is present if and only if `single_char` is false.
 
 ## Service Errors
 *Service errors* are represented by *error* objects. The following *error codes* are defined for
