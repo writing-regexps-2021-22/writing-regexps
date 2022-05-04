@@ -93,6 +93,11 @@ namespace {
             error_code = "unexpected_end";
             error_data["position"] = e.position();
             error_data["expected"] = e.expected();
+        } catch (const err::InvalidRange& e) {
+            error_code = "invalid_range";
+            error_data["span"] = e.span();
+            error_data["first"] = wr22::unicode::to_utf8(e.first());
+            error_data["last"] = wr22::unicode::to_utf8(e.last());
         } catch (const err::ParseError& e) {
             throw std::runtime_error(fmt::format("Unknown parse error: {}", e.what()));
         }
