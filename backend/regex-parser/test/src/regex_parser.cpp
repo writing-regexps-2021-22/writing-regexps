@@ -1,4 +1,5 @@
 // catch2
+#include "wr22/unicode/conversion.hpp"
 #include <catch2/catch.hpp>
 
 // regex parser tests
@@ -19,6 +20,7 @@ using Catch::Predicate;
 using regex_parser_tests::vec;
 using wr22::regex_parser::parser::parse_regex;
 using wr22::regex_parser::parser::errors::ExpectedEnd;
+using wr22::regex_parser::parser::errors::InvalidRange;
 using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
 using wr22::regex_parser::regex::CharacterClassData;
@@ -870,4 +872,52 @@ TEST_CASE("Character classes") {
         parse_regex(U"[abc"),
         UnexpectedEnd,
         Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 4; }));
+}
+
+TEST_CASE("Character classes as atoms", "[regex]") {
+    CHECK(
+        parse_regex(U"a[0-9]b")
+        == SpannedPart(
+            part::Sequence(
+                vec(SpannedPart(part::Literal(U'a'), Span::make_single_position(0)),
+                    SpannedPart(
+                        part::CharacterClass(CharacterClassData{
+                            .ranges =
+                                {
+                                    {
+                                        .range = CharacterRange::from_endpoints(U'0', U'9'),
+                                        .span = Span::make_with_length(2, 3),
+                                    },
+                                },
+                            .inverted = false,
+                        }),
+                        Span::make_with_length(1, 5)),
+                    SpannedPart(part::Literal(U'b'), Span::make_single_position(6)))),
+            whole(7)));
+    CHECK(
+        parse_regex(U"[0-9]+")
+        == SpannedPart(
+            part::Plus(SpannedPart(
+                part::CharacterClass(CharacterClassData{
+                    .ranges =
+                        {
+                            {
+                                .range = CharacterRange::from_endpoints(U'0', U'9'),
+                                .span = Span::make_with_length(1, 3),
+                            },
+                        },
+                    .inverted = false,
+                }),
+                Span::make_with_length(0, 5))),
+            whole(6)));
+}
+
+TEST_CASE("Invalid character ranges", "[regex]") {
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"[z-a]"),
+        InvalidRange,
+        Predicate<InvalidRange>([](const auto& e) {
+            return e.span() == Span::make_with_length(1, 3) && e.first() == U'z'
+                && e.last() == U'a';
+        }));
 }

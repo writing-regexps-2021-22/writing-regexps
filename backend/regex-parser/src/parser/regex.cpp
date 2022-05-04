@@ -450,7 +450,7 @@ public:
         } catch (const regex::InvalidCharacterRange& e) {
             // `current_span` must have a value whenever a character range is constructed,
             // which means it must do so here.
-            throw errors::InvalidRange(current_span.value(), e.first, e.last);
+            throw errors::InvalidRange(current_span.value().extend_right(1), e.first, e.last);
         }
 
         return make_spanned(
