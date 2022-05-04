@@ -20,6 +20,7 @@ public:
 
 private:
     nlohmann::json parse_handler(const crow::request& request, crow::response& response);
+    nlohmann::json match_handler(const crow::request& request, crow::response& response);
 
     crow::SimpleApp m_app;
 };
