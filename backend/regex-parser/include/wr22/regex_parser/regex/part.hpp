@@ -5,8 +5,8 @@
 #include <wr22/regex_parser/regex/capture.hpp>
 #include <wr22/regex_parser/regex/character_class_data.hpp>
 #include <wr22/regex_parser/span/span.hpp>
-#include <wr22/regex_parser/utils/adt.hpp>
-#include <wr22/regex_parser/utils/box.hpp>
+#include <wr22/utils/adt.hpp>
+#include <wr22/utils/box.hpp>
 
 // stl
 #include <iosfwd>
