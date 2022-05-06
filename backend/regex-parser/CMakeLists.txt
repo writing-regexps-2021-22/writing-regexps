@@ -20,6 +20,7 @@ target_link_libraries(
     PUBLIC
         fmt
         wr22-unicode
+        wr22-utils
 )
 
 if (${REGEX_PARSER_BUILD_TESTS})
