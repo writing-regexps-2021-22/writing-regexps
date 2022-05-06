@@ -19,7 +19,6 @@ target_link_libraries(
     wr22-regex-executor
     PUBLIC
         fmt
-        wr22-unicode
         wr22-regex-parser
 )
 

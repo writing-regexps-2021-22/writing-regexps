@@ -14,6 +14,7 @@ public:
 
     const Regex& regex_ref() const;
 
+
 private:
     std::reference_wrapper<const Regex> m_regex_ref;
 };
