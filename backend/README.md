@@ -48,3 +48,4 @@ Additional optional CMake flags used by individual modules:
 [lib.crow]: https://crowcpp.org
 [lib.fmt]: https://fmt.dev
 [lib.spdlog]: https://github.com/gabime/spdlog
+[tool.cmake]: https://cmake.org
