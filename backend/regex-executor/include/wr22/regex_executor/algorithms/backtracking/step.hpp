@@ -3,10 +3,14 @@
 // wr22
 #include <wr22/regex_executor/quantifier_type.hpp>
 #include <wr22/regex_parser/span/span.hpp>
+#include <wr22/utils/adt.hpp>
 
 // stl
 #include <string>
 #include <variant>
+
+// nlohmann
+#include <nlohmann/json.hpp>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -16,195 +20,235 @@ namespace failure_reasons {
         static constexpr const char* code() {
             return "end_of_input";
         }
+
+        bool operator==(const EndOfInput& other) const = default;
     };
 
     struct ExcludedChar {
         static constexpr const char* code() {
             return "excluded_char";
         }
+
+        bool operator==(const ExcludedChar& other) const = default;
     };
 
     struct OtherChar {
         static constexpr const char* code() {
             return "other_char";
         }
+
+        bool operator==(const OtherChar& other) const = default;
     };
 
     struct OptionsExhausted {
         static constexpr const char* code() {
             return "options_exhausted";
         }
+
+        bool operator==(const OptionsExhausted& other) const = default;
     };
 };  // namespace failure_reasons
 
 namespace detail::step {
     struct SuccessBase {
         static constexpr bool success = true;
+        bool operator==(const SuccessBase& other) const = default;
     };
 
     struct FailureBase {
         static constexpr bool success = false;
+        bool operator==(const FailureBase& other) const = default;
     };
 
-    namespace has {
-        struct StringPos {
-            size_t string_pos;
-        };
-
-        struct RegexSpan {
-            regex_parser::span::Span regex_span;
-        };
-
-        struct StringSpan {
-            regex_parser::span::Span string_span;
-        };
-    }  // namespace has
-
-    struct DefaultCommon : public has::RegexSpan {};
-
-    struct DefaultSuccess : public has::StringSpan {};
-
-    template <typename... FailureVariants>
-    struct DefaultFailure : public has::StringPos {
-        using FailureReason = std::variant<FailureVariants...>;
-        FailureReason failure_reason;
-    };
-
-    struct DefaultInfallible : public has::StringPos, public has::RegexSpan {};
-
-    template <typename CommonT, typename SuccessT, typename FailureT>
-    struct FallibleStep : public CommonT {
-        struct Success : public SuccessT, public SuccessBase {};
-        struct Failure : public FailureT, public FailureBase {};
-        using Result = std::variant<Success, Failure>;
-        Result result;
-    };
-
-    template <typename T, const char* type_code_v>
-    struct WithTypeCode : public T {
-        static constexpr const char* type_code() {
-            return type_code_v;
-        }
-    };
-
-    namespace variant_pieces {
-        namespace match_quantifier {
-            struct Infallible : public DefaultInfallible {
-                QuantifierType quantifier_type;
-            };
-            using Step = Infallible;
-        }  // namespace match_quantifier
-
-        namespace finish_quantifier {
-            struct Common {
-                QuantifierType quantifier_type;
-            };
-            struct Success : public DefaultSuccess {
-                size_t num_repetitions;
-            };
-            struct Failure : public DefaultFailure<failure_reasons::OptionsExhausted> {};
-            using Step = FallibleStep<Common, Success, Failure>;
-        }  // namespace finish_quantifier
-
-        namespace match_char_class {
-            struct Common : public DefaultCommon {};
-            struct Success : public DefaultSuccess {};
-            struct Failure :
-                public DefaultFailure<failure_reasons::ExcludedChar, failure_reasons::EndOfInput> {
-            };
-            constexpr char type_code[] = "match_char_class";
-            using Step = WithTypeCode<FallibleStep<Common, Success, Failure>, type_code>;
-        }  // namespace match_char_class
-
-        namespace match_wildcard {
-            struct Common : public DefaultCommon {};
-            struct Success : public DefaultSuccess {};
-            struct Failure : public DefaultFailure<failure_reasons::EndOfInput> {};
-            constexpr char type_code[] = "match_wildcard";
-            using Step = WithTypeCode<FallibleStep<Common, Success, Failure>, type_code>;
-        }  // namespace match_wildcard
-
-        namespace begin_group {
-            struct Infallible : public DefaultInfallible {
-                // TODO: capture.
-                regex_parser::span::Span regex_span;
-            };
-            constexpr char type_code[] = "begin_group";
-            using Step = WithTypeCode<Infallible, type_code>;
-        }  // namespace begin_group
-
-        namespace end_group {
-            struct Infallible : public DefaultInfallible {};
-            constexpr char type_code[] = "end_group";
-            using Step = WithTypeCode<Infallible, type_code>;
-        }  // namespace end_group
-
-        namespace match_literal {
-            struct Common : public DefaultCommon {
-                std::u32string literal;
-            };
-            struct Success : public DefaultSuccess {};
-            struct Failure :
-                public DefaultFailure<failure_reasons::OtherChar, failure_reasons::EndOfInput> {};
-            constexpr char type_code[] = "match_literal";
-            using Step = WithTypeCode<FallibleStep<Common, Success, Failure>, type_code>;
-        }  // namespace match_literal
-
-        namespace match_alternatives {
-            struct Infallible : public DefaultInfallible {};
-            constexpr char type_code[] = "match_alternatives";
-            using Step = WithTypeCode<Infallible, type_code>;
-        }  // namespace match_alternatives
-
-        namespace finish_alternatives {
-            struct Common : public DefaultCommon {};
-            struct Success : public DefaultSuccess {
-                size_t alternative_chosen;
-            };
-            struct Failure : public DefaultFailure<failure_reasons::OptionsExhausted> {};
-            constexpr char type_code[] = "finish_alternatives";
-            using Step = WithTypeCode<FallibleStep<Common, Success, Failure>, type_code>;
-        }  // namespace finish_alternatives
-
-        namespace backtrack {
-            struct Infallible : public DefaultInfallible {
-                struct Origin {
-                    size_t step;
-                };
-                struct ReconsideredDecision {
-                    size_t step;
-                };
-
-                Origin origin;
-                ReconsideredDecision reconsidered_decision;
-                size_t continue_after_step;
-            };
-            constexpr char type_code[] = "backtrack";
-            using Step = WithTypeCode<Infallible, type_code>;
-        }  // namespace backtrack
-
-        namespace end {
-            struct Common : public has::StringPos {};
-            struct Success {};
-            struct Failure {};
-            constexpr char type_code[] = "end";
-            using Step = WithTypeCode<FallibleStep<Common, Success, Failure>, type_code>;
-        }  // namespace end
-    }      // namespace variant_pieces
 }  // namespace detail::step
 
 namespace step {
-    struct MatchQuantifier : public detail::step::variant_pieces::match_quantifier::Step {};
-    struct FinishQuantifier : public detail::step::variant_pieces::finish_quantifier::Step {};
-    struct MatchCharClass : public detail::step::variant_pieces::match_char_class::Step {};
-    struct MatchLiteral : public detail::step::variant_pieces::match_literal::Step {};
-    struct MatchWildcard : public detail::step::variant_pieces::match_wildcard::Step {};
-    struct BeginGroup : public detail::step::variant_pieces::begin_group::Step {};
-    struct EndGroup : public detail::step::variant_pieces::end_group::Step {};
-    struct MatchAlternatives : public detail::step::variant_pieces::match_alternatives::Step {};
-    struct FinishAlternatives : public detail::step::variant_pieces::finish_alternatives::Step {};
-    struct Backtrack : public detail::step::variant_pieces::backtrack::Step {};
-    struct End : public detail::step::variant_pieces::end::Step {};
+    struct MatchQuantifier {
+        regex_parser::span::Span regex_span;
+        size_t string_pos;
+        QuantifierType quantifier_type;
+
+        const char* type_code() const;
+        bool operator==(const MatchQuantifier& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const MatchQuantifier& step);
+
+    struct FinishQuantifier {
+        QuantifierType quantifier_type;
+        regex_parser::span::Span regex_span;
+        struct Success : public detail::step::SuccessBase {
+            regex_parser::span::Span string_span;
+            size_t num_repetitions;
+        };
+        struct Failure : public detail::step::FailureBase {
+            size_t string_pos;
+            utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
+        };
+        utils::Adt<Success, Failure> result;
+
+        const char* type_code() const;
+        bool operator==(const FinishQuantifier& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const FinishQuantifier& step);
+
+    struct MatchCharClass {
+        regex_parser::span::Span regex_span;
+        struct Success : public detail::step::SuccessBase {
+            regex_parser::span::Span string_span;
+        };
+        struct Failure : public detail::step::FailureBase {
+            size_t string_pos;
+            utils::Adt<failure_reasons::ExcludedChar, failure_reasons::EndOfInput> failure_reason;
+        };
+        utils::Adt<Success, Failure> result;
+
+        constexpr const char* type_code() const {
+            return "match_char_class";
+        }
+        bool operator==(const MatchCharClass& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const MatchCharClass& step);
+
+    struct MatchWildcard {
+        regex_parser::span::Span regex_span;
+        struct Success : public detail::step::SuccessBase {
+            regex_parser::span::Span string_span;
+        };
+        struct Failure : public detail::step::FailureBase {
+            size_t string_pos;
+            utils::Adt<failure_reasons::EndOfInput> failure_reason;
+        };
+        utils::Adt<Success, Failure> result;
+
+        constexpr const char* type_code() const {
+            return "match_wildcard";
+        }
+        bool operator==(const MatchWildcard& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const MatchWildcard& step);
+
+    struct BeginGroup {
+        // TODO: captures.
+        regex_parser::span::Span regex_span;
+        size_t string_pos;
+
+        constexpr const char* type_code() const {
+            return "begin_group";
+        }
+        bool operator==(const BeginGroup& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const BeginGroup& step);
+
+    struct EndGroup {
+        size_t string_pos;
+        constexpr const char* type_code() const {
+            return "end_group";
+        }
+        bool operator==(const EndGroup& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const EndGroup& step);
+
+    struct MatchLiteral {
+        regex_parser::span::Span regex_span;
+        char32_t literal;
+        struct Success : public detail::step::SuccessBase {
+            regex_parser::span::Span string_span;
+        };
+        struct Failure : public detail::step::FailureBase {
+            size_t string_pos;
+            utils::Adt<failure_reasons::OtherChar, failure_reasons::EndOfInput> failure_reason;
+        };
+        utils::Adt<Success, Failure> result;
+
+        constexpr const char* type_code() const {
+            return "match_literal";
+        }
+        bool operator==(const MatchLiteral& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const MatchLiteral& step);
+
+    struct MatchAlternatives {
+        regex_parser::span::Span regex_span;
+        size_t string_pos;
+
+        constexpr const char* type_code() const {
+            return "match_alternatives";
+        }
+        bool operator==(const MatchAlternatives& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const MatchAlternatives& step);
+
+    struct FinishAlternatives {
+        regex_parser::span::Span regex_span;
+        struct Success : public detail::step::SuccessBase {
+            regex_parser::span::Span string_span;
+            size_t alternative_chosen;
+        };
+        struct Failure : public detail::step::FailureBase {
+            size_t string_pos;
+            utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
+        };
+        utils::Adt<Success, Failure> result;
+
+        constexpr const char* type_code() const {
+            return "finish_alternatives";
+        }
+        bool operator==(const FinishAlternatives& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const FinishAlternatives& step);
+
+    struct Backtrack {
+        struct Origin {
+            size_t step;
+            bool operator==(const Origin& other) const = default;
+        };
+        struct ReconsideredDecision {
+            size_t step;
+            bool operator==(const ReconsideredDecision& other) const = default;
+        };
+
+        regex_parser::span::Span regex_span;
+        size_t string_pos;
+        Origin origin;
+        ReconsideredDecision reconsidered_decision;
+        size_t continue_after_step;
+
+        constexpr const char* type_code() const {
+            return "backtrack";
+        }
+        bool operator==(const Backtrack& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const Backtrack& step);
+
+    struct End {
+        size_t string_pos;
+        struct Success : public detail::step::SuccessBase {};
+        struct Failure : public detail::step::FailureBase {};
+
+        constexpr const char* type_code() const {
+            return "end";
+        }
+        bool operator==(const End& other) const = default;
+    };
+    void to_json(nlohmann::json& j, const End& step);
+
+    using Adt = utils::Adt<
+        MatchQuantifier,
+        FinishQuantifier,
+        MatchCharClass,
+        MatchLiteral,
+        MatchWildcard,
+        BeginGroup,
+        EndGroup,
+        MatchAlternatives,
+        FinishAlternatives,
+        Backtrack,
+        End>;
 }  // namespace step
+
+struct Step : public step::Adt {
+    using step::Adt::Adt;
+};
+void to_json(nlohmann::json& j, const Step& step);
 
 }  // namespace wr22::regex_executor::algorithms::backtracking

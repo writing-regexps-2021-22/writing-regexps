@@ -2,6 +2,7 @@
 
 // wr22
 #include <wr22/regex_executor/regex.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/executor.hpp>
 
 // stl
 #include <functional>
@@ -14,9 +15,10 @@ public:
 
     const Regex& regex_ref() const;
 
-
 private:
-    std::reference_wrapper<const Regex> m_regex_ref;
+    using BacktrackingExecutor = algorithms::backtracking::Executor;
+
+    BacktrackingExecutor m_executor;
 };
 
 }
