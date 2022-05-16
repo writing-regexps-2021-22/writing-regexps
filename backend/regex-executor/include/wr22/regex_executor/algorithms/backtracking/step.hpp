@@ -82,9 +82,9 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
+            wr22::utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
         };
-        utils::Adt<Success, Failure> result;
+        wr22::utils::Adt<Success, Failure> result;
 
         const char* type_code() const;
         bool operator==(const FinishQuantifier& other) const = default;
@@ -98,9 +98,10 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            utils::Adt<failure_reasons::ExcludedChar, failure_reasons::EndOfInput> failure_reason;
+            wr22::utils::Adt<failure_reasons::ExcludedChar, failure_reasons::EndOfInput>
+                failure_reason;
         };
-        utils::Adt<Success, Failure> result;
+        wr22::utils::Adt<Success, Failure> result;
 
         constexpr const char* type_code() const {
             return "match_char_class";
@@ -116,9 +117,9 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            utils::Adt<failure_reasons::EndOfInput> failure_reason;
+            wr22::utils::Adt<failure_reasons::EndOfInput> failure_reason;
         };
-        utils::Adt<Success, Failure> result;
+        wr22::utils::Adt<Success, Failure> result;
 
         constexpr const char* type_code() const {
             return "match_wildcard";
@@ -156,9 +157,9 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            utils::Adt<failure_reasons::OtherChar, failure_reasons::EndOfInput> failure_reason;
+            wr22::utils::Adt<failure_reasons::OtherChar, failure_reasons::EndOfInput> failure_reason;
         };
-        utils::Adt<Success, Failure> result;
+        wr22::utils::Adt<Success, Failure> result;
 
         constexpr const char* type_code() const {
             return "match_literal";
@@ -186,9 +187,9 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
+            wr22::utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
         };
-        utils::Adt<Success, Failure> result;
+        wr22::utils::Adt<Success, Failure> result;
 
         constexpr const char* type_code() const {
             return "finish_alternatives";
@@ -232,7 +233,7 @@ namespace step {
     };
     void to_json(nlohmann::json& j, const End& step);
 
-    using Adt = utils::Adt<
+    using Adt = wr22::utils::Adt<
         MatchQuantifier,
         FinishQuantifier,
         MatchCharClass,
