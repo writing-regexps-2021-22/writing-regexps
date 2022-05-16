@@ -921,3 +921,46 @@ TEST_CASE("Invalid character ranges", "[regex]") {
                 && e.last() == U'a';
         }));
 }
+
+TEST_CASE("Quantifiers before any atom", "[regex]") {
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"*abc"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"+abc"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'+'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"?abc"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'?'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"(*)"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 1 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"(?:*)"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 3 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"foo|*bar"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 4 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"*foo|bar"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
+    CHECK_THROWS_MATCHES(
+        parse_regex(U"*[a]"),
+        UnexpectedChar,
+        Predicate<UnexpectedChar>(
+            [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
+}
