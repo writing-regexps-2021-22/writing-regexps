@@ -6,6 +6,10 @@
 #include <wr22/regex_parser/span/span.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
 #include <wr22/utils/adt.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/decision.hpp>
+
+// stl
+#include <optional>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -14,6 +18,7 @@ struct Interpreter;
 namespace instruction {
     struct Execute {
         utils::SpannedRef<regex_parser::regex::Part> part;
+        std::optional<Decision> forced_decision;
     };
 
     struct AddStep {

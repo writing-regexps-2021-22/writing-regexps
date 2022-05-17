@@ -1,6 +1,7 @@
 #pragma once
 
 // wr22
+#include <wr22/regex_executor/algorithms/backtracking/failure_reason.hpp>
 #include <wr22/regex_executor/quantifier_type.hpp>
 #include <wr22/regex_parser/span/span.hpp>
 #include <wr22/utils/adt.hpp>
@@ -15,39 +16,6 @@
 namespace wr22::regex_executor::algorithms::backtracking {
 
 // TODO: maybe move to a separate file.
-namespace failure_reasons {
-    struct EndOfInput {
-        static constexpr const char* code() {
-            return "end_of_input";
-        }
-
-        bool operator==(const EndOfInput& other) const = default;
-    };
-
-    struct ExcludedChar {
-        static constexpr const char* code() {
-            return "excluded_char";
-        }
-
-        bool operator==(const ExcludedChar& other) const = default;
-    };
-
-    struct OtherChar {
-        static constexpr const char* code() {
-            return "other_char";
-        }
-
-        bool operator==(const OtherChar& other) const = default;
-    };
-
-    struct OptionsExhausted {
-        static constexpr const char* code() {
-            return "options_exhausted";
-        }
-
-        bool operator==(const OptionsExhausted& other) const = default;
-    };
-};  // namespace failure_reasons
 
 namespace detail::step {
     struct SuccessBase {
@@ -82,7 +50,7 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            wr22::utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
+            FailureReason<failure_reasons::OptionsExhausted> failure_reason;
         };
         wr22::utils::Adt<Success, Failure> result;
 
@@ -98,7 +66,7 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            wr22::utils::Adt<failure_reasons::ExcludedChar, failure_reasons::EndOfInput>
+            FailureReason<failure_reasons::ExcludedChar, failure_reasons::EndOfInput>
                 failure_reason;
         };
         wr22::utils::Adt<Success, Failure> result;
@@ -117,7 +85,7 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            wr22::utils::Adt<failure_reasons::EndOfInput> failure_reason;
+            FailureReason<failure_reasons::EndOfInput> failure_reason;
         };
         wr22::utils::Adt<Success, Failure> result;
 
@@ -157,7 +125,7 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            wr22::utils::Adt<failure_reasons::OtherChar, failure_reasons::EndOfInput> failure_reason;
+            FailureReason<failure_reasons::OtherChar, failure_reasons::EndOfInput> failure_reason;
         };
         wr22::utils::Adt<Success, Failure> result;
 
@@ -187,7 +155,7 @@ namespace step {
         };
         struct Failure : public detail::step::FailureBase {
             size_t string_pos;
-            wr22::utils::Adt<failure_reasons::OptionsExhausted> failure_reason;
+            FailureReason<failure_reasons::OptionsExhausted> failure_reason;
         };
         wr22::utils::Adt<Success, Failure> result;
 
@@ -199,19 +167,7 @@ namespace step {
     void to_json(nlohmann::json& j, const FinishAlternatives& step);
 
     struct Backtrack {
-        struct Origin {
-            size_t step;
-            bool operator==(const Origin& other) const = default;
-        };
-        struct ReconsideredDecision {
-            size_t step;
-            bool operator==(const ReconsideredDecision& other) const = default;
-        };
-
-        regex_parser::span::Span regex_span;
         size_t string_pos;
-        Origin origin;
-        ReconsideredDecision reconsidered_decision;
         size_t continue_after_step;
 
         constexpr const char* type_code() const {
@@ -225,6 +181,7 @@ namespace step {
         size_t string_pos;
         struct Success : public detail::step::SuccessBase {};
         struct Failure : public detail::step::FailureBase {};
+        wr22::utils::Adt<Success, Failure> result;
 
         constexpr const char* type_code() const {
             return "end";

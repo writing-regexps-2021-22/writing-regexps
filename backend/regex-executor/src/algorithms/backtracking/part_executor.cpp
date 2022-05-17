@@ -1,8 +1,11 @@
 // wr22
+#include <wr22/regex_executor/algorithms/backtracking/decision.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/part_executor.hpp>
 #include <wr22/regex_executor/utils/spanned_ref.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
+
+#include <iostream>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -188,7 +191,6 @@ public:
         : m_part_ref(part_ref), m_decision(std::move(decision)) {}
 
     bool execute(Interpreter& interpreter) const {
-        interpreter.make_snapshot();
         interpreter.add_decision(m_decision);
         const auto& alternative = m_part_ref.item().alternatives.at(m_decision.decision_index);
         auto ref = SpannedRef(alternative.part(), alternative.span());
@@ -261,6 +263,7 @@ public:
         : m_part_ref(part_ref), m_decision(decision), m_already_matched(already_matched) {}
 
     bool execute(Interpreter& interpreter) {
+        std::cout << "  ~ greedy_walk" << std::endl;
         if (m_decision.num_repetitions.has_value()) {
             // Case 1: known number of repetitions.
             auto num_repetitions = m_decision.num_repetitions.value();
@@ -298,42 +301,59 @@ public:
                     "while executing a regular expression unless there is a bug in the code");
             }
 
-            // (3) Uninstall the error hook.
-            interpreter.add_instruction(instruction::Run{
-                .ctx = std::monostate{},
-                .fn = []([[maybe_unused]] const instruction::Run::Context& ctx,
-                         Interpreter& interpreter) { interpreter.pop_error_hook(); },
-            });
-
-            // (2) Run the greedy walk process.
-            interpreter.add_instruction(instruction::Run{
-                .ctx = m_part_ref,
-                .fn = greedy_walk_run_func,
-            });
-
-            // (1) Install the error hook.
+            // (5) Uninstall the error hook.
             interpreter.add_instruction(instruction::Run{
                 .ctx = std::monostate{},
                 .fn =
                     []([[maybe_unused]] const instruction::Run::Context& ctx,
                        Interpreter& interpreter) {
+                        std::cout << "  ~ greedy_walk: pop error hook" << std::endl;
+                        interpreter.pop_error_hook();
+                    },
+            });
+
+            // (4) Run the greedy walk process.
+            interpreter.add_instruction(instruction::Run{
+                .ctx = m_part_ref,
+                .fn = greedy_walk_run_func,
+            });
+
+            // (3) Install the error hook.
+            interpreter.add_instruction(instruction::Run{
+                .ctx = std::monostate{},
+                .fn =
+                    []([[maybe_unused]] const instruction::Run::Context& ctx,
+                       Interpreter& interpreter) {
+                        std::cout << "  ~ greedy_walk: push error hook" << std::endl;
+                        auto decision_ref = DecisionRef{.index = interpreter.counter_at_offset(0)};
+                        interpreter.pop_counter();
+
                         interpreter.push_error_hook(ErrorHook{
-                            .ctx = std::monostate{},
+                            .ctx = decision_ref,
                             .fn =
                                 [](const ErrorHook::Context& ctx, Interpreter& interpreter) {
-                                    auto real_num_repetitions = interpreter.counter_at_offset(0);
+                                    std::cout << "  ~ greedy_walk: error hook" << std::endl;
+                                    auto actual_num_repetitions = interpreter.counter_at_offset(0);
                                     auto decision_ref = std::get<DecisionRef>(ctx.as_variant());
                                     // Set the number of repetitions to the actual one in the
                                     // decision made earlier.
                                     std::get<QuantifierDecision<Quantifier>>(
-                                        interpreter.decision_at(decision_ref).as_variant())
-                                        .num_repetitions = real_num_repetitions;
+                                        interpreter.decision_snapshot_at(decision_ref)
+                                            .decision.as_variant())
+                                        .actual_num_repetitions = actual_num_repetitions;
                                     // Pop the repetition counter.
                                     interpreter.pop_counter();
                                 },
                         });
                     },
             });
+
+            // (2) Count the number of repetitions.
+            interpreter.push_counter(m_already_matched);
+
+            // (1) Make a snapshot and pass its index to the error hook.
+            auto decision_ref = interpreter.add_decision(m_decision);
+            interpreter.push_counter(decision_ref.index);
         }
 
         return true;
@@ -355,26 +375,39 @@ private:
     }
 
     static void greedy_walk_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter) {
-        // (3) Run quasi-recursively.
+        std::cout << "  ~ greedy_walk_run_func" << std::endl;
+        // (4) Run quasi-recursively.
         interpreter.add_instruction(instruction::Run{
             .ctx = ctx,
             .fn = greedy_walk_run_func,
         });
-        // (2) Increment the repetition counter.
+        // (3) Increment the repetition counter.
         interpreter.add_instruction(instruction::Run{
             .ctx = std::monostate{},
             .fn =
                 []([[maybe_unused]] const instruction::Run::Context& ctx,
                    Interpreter& interpreter) {
+                    std::cout << "  ~ greedy_walk_run_func: increment" << std::endl;
                     auto& current_num_repetitions = interpreter.counter_at_offset(0);
                     ++current_num_repetitions;
                 },
         });
-        // (1) Match one item.
+        // (2) Match one item.
         const auto& part = std::get<SpannedRef<Quantifier>>(ctx.as_variant());
         const auto& inner = *part.item().inner;
         auto ref = SpannedRef<Part>(inner.part(), inner.span());
         interpreter.add_instruction(instruction::Execute{ref});
+
+        // (1) Make a mini-snapshot.
+        interpreter.add_instruction(instruction::Run{
+            .ctx = std::monostate{},
+            .fn =
+                []([[maybe_unused]] const instruction::Run::Context& ctx,
+                   Interpreter& interpreter) {
+                    std::cout << "  ~ greedy_walk_run_func: make a mini snapshot" << std::endl;
+                    interpreter.push_mini_snapshot();
+                },
+        });
     }
 
     SpannedRef<Quantifier> m_part_ref;

@@ -11,10 +11,14 @@ const Regex& Executor::regex_ref() const {
 }
 
 MatchResult Executor::execute(const std::u32string_view& string) const {
-    Interpreter interpreter(string);
+    auto interpreter = Interpreter(regex_ref(), string);
+    // TODO: handle failure.
     while (!interpreter.finished()) {
         interpreter.run_instruction();
     }
+    return MatchResult {
+        .steps = std::move(interpreter).into_steps(),
+    };
 }
 
 }  // namespace wr22::regex_executor::algorithms::backtracking
