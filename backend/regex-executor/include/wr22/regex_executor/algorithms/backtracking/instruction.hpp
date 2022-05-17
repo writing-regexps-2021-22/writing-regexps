@@ -1,12 +1,13 @@
 #pragma once
 
 // wr22
-#include <wr22/regex_executor/utils/spanned_ref.hpp>
-#include <wr22/regex_executor/algorithms/backtracking/step.hpp>
-#include <wr22/regex_parser/span/span.hpp>
-#include <wr22/regex_parser/regex/part.hpp>
-#include <wr22/utils/adt.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/decision.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/decision_ref.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/step.hpp>
+#include <wr22/regex_executor/utils/spanned_ref.hpp>
+#include <wr22/regex_parser/regex/part.hpp>
+#include <wr22/regex_parser/span/span.hpp>
+#include <wr22/utils/adt.hpp>
 
 // stl
 #include <optional>
@@ -28,6 +29,7 @@ namespace instruction {
     struct Run {
         using Context = wr22::utils::Adt<
             std::monostate,
+            DecisionRef,
             utils::SpannedRef<regex_parser::regex::part::Star>,
             utils::SpannedRef<regex_parser::regex::part::Plus>,
             utils::SpannedRef<regex_parser::regex::part::Optional>>;

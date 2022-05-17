@@ -25,8 +25,6 @@ struct AlternativesDecision {
     std::optional<AlternativesDecision> reconsider(
         Interpreter& interpreter,
         InterpreterStateSnapshot snapshot) const;
-
-    bool execute()
 };
 
 template <typename PartT>

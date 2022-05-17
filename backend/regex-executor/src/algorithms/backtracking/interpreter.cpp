@@ -1,4 +1,6 @@
 // wr22
+#include "wr22/unicode/conversion.hpp"
+#include <wr22/regex_executor/algorithms/backtracking/decision_applicator.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/part_executor.hpp>
@@ -19,7 +21,7 @@ Interpreter::Interpreter(const Regex& regex, const std::u32string_view& string_r
     auto ref = utils::SpannedRef<regex_parser::regex::Part>(
         regex.root_part().part(),
         regex.root_part().span());
-    m_current_state.instructions.push(instruction::Execute{ref});
+    m_current_state.instructions.push_back(instruction::Execute{ref});
 }
 
 std::optional<char32_t> Interpreter::current_char() const {
@@ -37,6 +39,7 @@ DecisionRef Interpreter::add_decision(Decision decision) {
     auto index = m_decision_snapshots.size();
     auto snapshot = InterpreterStateSnapshot{
         .state = m_current_state,
+        .current_instruction = m_current_instruction.value(),
         .before_step = m_steps.size(),
     };
     auto decision_snapshot = DecisionSnapshot{
@@ -66,6 +69,7 @@ void Interpreter::restore_from_snapshot(InterpreterStateSnapshot snapshot) {
 void Interpreter::push_mini_snapshot() {
     m_mini_snapshots.push(InterpreterStateMiniSnapshot{
         .cursor = cursor(),
+        .before_step = m_steps.size(),
     });
 }
 
@@ -83,7 +87,7 @@ std::optional<std::reference_wrapper<const InterpreterStateMiniSnapshot>> Interp
 }
 
 void Interpreter::add_instruction(Instruction instruction) {
-    m_current_state.instructions.push(std::move(instruction));
+    m_current_state.instructions.push_back(std::move(instruction));
 }
 
 void Interpreter::add_step(Step step) {
@@ -124,27 +128,57 @@ bool Interpreter::finished() const {
     return m_current_state.instructions.empty();
 }
 
+std::ostream& operator<<(std::ostream& out, const Instruction& instruction) {
+    instruction.visit(
+        [&out](const instruction::AddStep& instruction) {
+            out << "add step: " << nlohmann::json(instruction.step).dump();
+        },
+        [&out](const instruction::Execute& instruction) {
+            out << "execute part: " << instruction.part.span();
+            if (instruction.forced_decision.has_value()) {
+                out << " [forced decision]";
+            }
+        },
+        [&out](const instruction::Run& instruction) {
+            out << "run function: " << (void*)instruction.fn;
+        });
+    return out;
+}
+
 void Interpreter::run_instruction() {
-    auto instruction = std::move(m_current_state.instructions.top());
-    m_current_state.instructions.pop();
-    std::cout << "==> Run instruction [at " << cursor() << "]" << std::endl;
+    std::cout << "==> Run instruction [at " << cursor()
+              << "]: " << wr22::unicode::to_utf8(m_string_ref.substr(0, cursor())) << "|"
+              << wr22::unicode::to_utf8(m_string_ref.substr(cursor())) << std::endl;
     std::cout << " ### Counters: ";
     for (auto x : m_current_state.counters) {
         std::cout << x << ", ";
     }
-    std::cout << "<++>" << std::endl;
+    std::cout << ">>" << std::endl;
+    std::cout << " ### Instructions:" << std::endl;
+    for (auto x : m_current_state.instructions) {
+        std::cout << "        <*> " << x << std::endl;
+    }
+
+    auto instruction = std::move(m_current_state.instructions.back());
+    m_current_state.instructions.pop_back();
+    m_current_instruction = instruction;
+    std::cout << " -> " << instruction << std::endl;
     auto ok = instruction.visit(
         [this](const instruction::AddStep& instruction) {
-            std::cout << " -> add step: " << nlohmann::json(instruction.step).dump() << std::endl;
             add_step(std::move(instruction.step));
             return true;
         },
         [this](const instruction::Execute& instruction) {
-            std::cout << " -> execute part: " << instruction.part.span() << std::endl;
             if (instruction.forced_decision.has_value()) {
                 return instruction.forced_decision.value().visit(
                     [this, part = instruction.part](const auto& decision) {
-                        auto executor = decision.construct_executor(part);
+                        using DecisionType = std::remove_cvref_t<decltype(decision)>;
+                        using ApplicatorType = DecisionApplicator<DecisionType>;
+                        using PartType = typename DecisionType::PartType;
+                        auto specific_part = utils::SpannedRef<PartType>(
+                            std::get<PartType>(part.item().as_variant()),
+                            part.span());
+                        auto executor = ApplicatorType::construct_executor(specific_part, decision);
                         return executor.execute(*this);
                     });
             } else {
@@ -153,7 +187,6 @@ void Interpreter::run_instruction() {
             }
         },
         [this](const instruction::Run& instruction) {
-            std::cout << " -> run function " << (void*)instruction.fn << std::endl;
             instruction(*this);
             return true;
         });
@@ -187,6 +220,7 @@ void Interpreter::run_instruction() {
         auto last_decision_snapshot = std::move(m_decision_snapshots.back());
         m_decision_snapshots.pop_back();
         std::cout << " ---> pop decision snapshot" << std::endl;
+        auto current_instruction = last_decision_snapshot.snapshot.current_instruction;
         auto has_reconsidered = last_decision_snapshot.decision.visit(
             [this, snapshot = std::move(last_decision_snapshot.snapshot)](auto& decision) {
                 std::cout << " ---> reconsider decision" << std::endl;
@@ -202,19 +236,28 @@ void Interpreter::run_instruction() {
             });
 
         if (has_reconsidered) {
-            m_current_state.instructions.top().visit(
+            auto new_instruction = current_instruction.visit(
                 [decision = std::move(last_decision_snapshot.decision)](
-                    instruction::Execute& instruction) mutable {
+                    instruction::Execute instruction) mutable -> Instruction {
                     instruction.forced_decision = std::move(decision);
+                    return instruction;
                 },
-                [](auto&) {
-                    throw std::logic_error("No snapshot could have been made just before am "
+                [](auto&) -> Instruction {
+                    throw std::logic_error("No snapshot could have been made just before an "
                                            "instruction other that `Execute`");
                 });
+            m_current_state.instructions.push_back(std::move(new_instruction));
             break;
         }
     }
     std::cout << " -> exit reconsider loop" << std::endl;
+}
+
+void Interpreter::finalize() {
+    add_step(step::End{
+        .string_pos = cursor(),
+        .result = step::End::Success{},
+    });
 }
 
 size_t Interpreter::parse_counter_offset(size_t offset) const {

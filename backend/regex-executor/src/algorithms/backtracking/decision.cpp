@@ -41,15 +41,24 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     state.error_hooks = std::move(snapshot.state.error_hooks);
     state.instructions = std::move(snapshot.state.instructions);
     state.counters = std::move(snapshot.state.counters);
-    state.counters.back() += new_num_repetitions;
+    //if (state.counters.empty()) {
+    //    throw std::logic_error("")
+    //}
+    //state.counters.back() += new_num_repetitions;
 
     auto maybe_mini_snapshot = interpreter.last_mini_snapshot();
     if (!maybe_mini_snapshot.has_value()) {
         throw std::logic_error("No mini-snapshot exists, but QuantifierDecision<...> has not yet "
                                "exhausted its options");
     }
-    state.cursor = maybe_mini_snapshot.value().get().cursor;
+    auto mini_snapshot = maybe_mini_snapshot.value().get();
+    state.cursor = mini_snapshot.cursor;
+    auto before_step = mini_snapshot.before_step;
     interpreter.pop_mini_snapshot();
+    interpreter.add_step(step::Backtrack{
+        .string_pos = interpreter.cursor(),
+        .continue_after_step = before_step - 1,
+    });
 
     return std::move(new_decision);
 }

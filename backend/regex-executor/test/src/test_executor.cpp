@@ -14,8 +14,10 @@ using wr22::regex_executor::Regex;
 using wr22::regex_parser::parser::parse_regex;
 
 TEST_CASE("Sequences are executed correctly") {
-    auto regex = Regex(parse_regex(U"gr[ae]+y"));
+    //auto regex = Regex(parse_regex(U"gr[ae]+y"));
+    auto regex = Regex(parse_regex(U"(.*)ll"));
     auto ex = Executor(regex);
-    auto res = ex.execute(U"graey");
+    //auto res = ex.execute(U"graey");
+    auto res = ex.execute(U"ball");
     std::cout << nlohmann::json(res.steps).dump(4) << std::endl;
 }

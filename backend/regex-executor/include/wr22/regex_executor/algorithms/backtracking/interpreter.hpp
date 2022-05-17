@@ -51,6 +51,7 @@ public:
     bool finished() const;
 
     void run_instruction();
+    void finalize();
 
     std::vector<Step> into_steps() &&;
 
@@ -65,6 +66,7 @@ private:
     std::vector<DecisionSnapshot> m_decision_snapshots;
     std::stack<InterpreterStateMiniSnapshot> m_mini_snapshots;
     std::vector<Step> m_steps;
+    std::optional<Instruction> m_current_instruction;
 };
 
 }  // namespace wr22::regex_executor::algorithms::backtracking

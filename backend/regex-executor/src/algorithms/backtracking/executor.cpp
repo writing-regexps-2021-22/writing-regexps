@@ -16,6 +16,7 @@ MatchResult Executor::execute(const std::u32string_view& string) const {
     while (!interpreter.finished()) {
         interpreter.run_instruction();
     }
+    interpreter.finalize();
     return MatchResult {
         .steps = std::move(interpreter).into_steps(),
     };
