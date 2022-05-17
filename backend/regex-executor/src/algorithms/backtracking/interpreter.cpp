@@ -1,5 +1,4 @@
 // wr22
-#include "wr22/unicode/conversion.hpp"
 #include <wr22/regex_executor/algorithms/backtracking/decision_applicator.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
@@ -7,6 +6,7 @@
 #include <wr22/regex_executor/algorithms/backtracking/step.hpp>
 #include <wr22/regex_executor/utils/spanned_ref.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
+#include <wr22/unicode/conversion.hpp>
 
 // fmt
 #include <fmt/compile.h>
@@ -214,7 +214,7 @@ void Interpreter::run_instruction() {
         std::cout << " -> enter reconsider loop" << std::endl;
         if (m_decision_snapshots.empty()) {
             // TODO: signal about failed matching.
-            std::terminate();
+            throw std::runtime_error("String not matched");
         }
 
         auto last_decision_snapshot = std::move(m_decision_snapshots.back());
