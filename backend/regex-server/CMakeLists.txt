@@ -25,6 +25,7 @@ target_link_libraries(
     PUBLIC
         fmt
         wr22-regex-parser
+        wr22-regex-executor
 )
 
 add_executable(wr22-regex-server "src/main.cpp")

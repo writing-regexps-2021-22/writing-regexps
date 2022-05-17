@@ -1,5 +1,6 @@
 // wr22
-#include <nlohmann/json_fwd.hpp>
+#include <wr22/regex_executor/executor.hpp>
+#include <wr22/regex_executor/regex.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_server/service_error.hpp>
@@ -170,79 +171,36 @@ nlohmann::json Webserver::match_handler(const crow::request& request, crow::resp
         throw service_error::InvalidRequestJson{};
     }
 
-    auto regex = decode_json_string(json_at(request_json, "regex"));
+    auto regex_string = decode_json_string(json_at(request_json, "regex"));
     auto json_strings = json_at(request_json, "strings");
     if (!json_strings.is_array()) {
         throw service_error::InvalidRequestJson{};
     }
 
-    // STUB.
-    if (regex != U"[a-z]*(.)(?P<bar>0)") {
-        throw service_error::NotImplemented{};
-    }
+    // TODO: handle parse errors.
+    auto regex = regex_executor::Regex(regex_parser::parser::parse_regex(regex_string));
 
     auto response_json = nlohmann::json::object();
     auto& match_results = response_json["match_results"];
     match_results = nlohmann::json::array();
+    auto executor = regex_executor::Executor(regex);
 
-    // STUB.
     for (const auto& json_string_spec : json_strings) {
         auto string = decode_json_string(json_at(json_string_spec, "string"));
         auto fragment_string = extract_json_string(json_at(json_string_spec, "fragment"));
         if (fragment_string != "whole") {
+            // STUB.
             throw service_error::NotImplemented{};
         }
 
-        if (string == U"foo0") {
-            match_results.push_back(nlohmann::json::parse(
-                "{\"matched\":true,\"match_groups\":{\"whole\":{\"text\":\"foo0\",\"span\":[0,4]"
-                "},\"by_index\":{\"1\":{\"text\":\"o\",\"span\":[2,3]}},\"by_name\":{\"bar\":{"
-                "\"text\":\"0\",\"span\":[3,4]}}},\"algorithm\":\"backtracking\",\"steps\":[{"
-                "\"type\":\"match_star\",\"regex_span\":[0,6],\"string_pos\":0},{\"type\":"
-                "\"match_char_class\",\"regex_span\":[0,5],\"success\":true,\"string_span\":[0,"
-                "1]},{\"type\":\"match_char_class\",\"regex_span\":[0,5],\"success\":true,"
-                "\"string_span\":[1,2]},{\"type\":\"match_char_class\",\"regex_span\":[0,5],"
-                "\"success\":true,\"string_span\":[2,3]},{\"type\":\"match_char_class\",\"regex_"
-                "span\":[0,5],\"string_pos\":3,\"success\":false,\"failure_reason\":{\"code\":"
-                "\"excluded_char\"}},{\"type\":\"finish_star\",\"string_span\":[0,3],\"num_"
-                "repetitions\":3,\"success\":true},{\"type\":\"begin_group\",\"capture\":{"
-                "\"type\":\"index\",\"index\":1},\"string_pos\":3,\"regex_span\":[6,9]},{"
-                "\"type\":\"match_wildcard\",\"regex_span\":[7,8],\"success\":true,\"string_"
-                "span\":[3,4]},{\"type\":\"end_group\",\"string_pos\":4},{\"type\":\"begin_"
-                "group\",\"capture\":{\"type\":\"name\",\"name\":\"bar\"},\"string_pos\":4,"
-                "\"regex_span\":[9,19]},{\"type\":\"match_literal\",\"literal\":\"0\",\"regex_"
-                "span\":[17,18],\"string_pos\":4,\"success\":false,\"failure_reason\":{\"code\":"
-                "\"end_of_string\"}},{\"type\":\"backtrack\",\"origin\":{\"step\":0},"
-                "\"reconsidered_decision\":{\"step\":4},\"continue_after_step\":3,\"string_"
-                "pos\":2},{\"type\":\"finish_star\",\"string_span\":[0,2],\"num_repetitions\":2,"
-                "\"success\":true},{\"type\":\"begin_group\",\"capture\":{\"type\":\"index\","
-                "\"index\":1},\"string_pos\":2,\"regex_span\":[6,9]},{\"type\":\"match_"
-                "wildcard\",\"regex_span\":[7,8],\"success\":true,\"string_span\":[2,3]},{"
-                "\"type\":\"end_group\",\"string_pos\":3},{\"type\":\"begin_group\",\"capture\":"
-                "{\"type\":\"name\",\"name\":\"bar\"},\"string_pos\":3,\"regex_span\":[9,19]},{"
-                "\"type\":\"match_literal\",\"literal\":\"0\",\"regex_span\":[17,18],\"string_"
-                "span\":[3,4],\"success\":true},{\"type\":\"end_group\",\"string_pos\":4},{"
-                "\"type\":\"end\",\"string_pos\":4,\"success\":true}]}"));
-        } else if (string == U"7") {
-            match_results.push_back(nlohmann::json::parse(
-                "{\"matched\":false,\"algorithm\":\"backtracking\",\"steps\":[{\"type\":\"match_"
-                "star\",\"regex_span\":[0,6],\"string_pos\":0},{\"type\":\"match_char_class\","
-                "\"regex_span\":[0,5],\"string_pos\":0,\"success\":false,\"failure_reason\":{"
-                "\"code\":\"excluded_char\"}},{\"type\":\"finish_star\",\"string_span\":[0,0],"
-                "\"num_repetitions\":0,\"success\":true},{\"type\":\"begin_group\",\"capture\":{"
-                "\"type\":\"index\",\"index\":1},\"string_pos\":0,\"regex_span\":[6,9]},{\"type\":"
-                "\"match_wildcard\",\"regex_span\":[7,8],\"success\":true,\"string_span\":[0,1]},{"
-                "\"type\":\"end_group\",\"string_pos\":1},{\"type\":\"begin_group\",\"capture\":{"
-                "\"type\":\"name\",\"name\":\"bar\"},\"string_pos\":1,\"regex_span\":[9,19]},{"
-                "\"type\":\"match_literal\",\"literal\":\"0\",\"regex_span\":[17,18],\"string_"
-                "pos\":1,\"success\":false,\"failure_reason\":{\"code\":\"end_of_string\"}},{"
-                "\"type\":\"backtrack\",\"origin\":{\"step\":0},\"reconsidered_decision\":{"
-                "\"step\":2},\"continue_after_step\":0,\"string_pos\":0},{\"type\":\"finish_star\","
-                "\"success\":false,\"failure_reason\":{\"code\":\"options_exhausted\"},\"string_"
-                "pos\":0},{\"type\":\"end\",\"string_pos\":0,\"success\":false}]}"));
-        } else {
-            throw service_error::NotImplemented{};
-        }
+        // TODO: handle match errors.
+        auto result = executor.execute(string);
+        auto json_result = nlohmann::json::object();
+        json_result["matched"] = true;
+        // TODO: captures.
+        json_result["algorithm"] = "backtracking";
+        json_result["steps"] = result.steps;
+        match_results.push_back(std::move(json_result));
     }
 
     return response_json;
