@@ -1,4 +1,4 @@
-# Communication Interface Specification v 0.1.0
+# Communication Interface Specification v 0.2.0
 
 ## Common Definitions And Convention
 1. **Backend** is the program that implements processing of regular expressions and provides
