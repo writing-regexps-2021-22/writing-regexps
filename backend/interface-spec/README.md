@@ -1,4 +1,4 @@
-# Communication Interface Specification v 0.2.0
+# Communication Interface Specification v 0.2.1
 
 ## Common Definitions And Convention
 1. **Backend** is the program that implements processing of regular expressions and provides
@@ -203,8 +203,8 @@ Allowed HTTP methods: `POST`.
 2. `strings` — A *JSON array* of *string match requests*, each representing a string to match
    against the regular expression. Each **string match request** is a *JSON object* with the following
    fields:
-    1. `string`: — A *JSON string* representing the string to be matched.
-    2. `fragment`: — A *JSON string* describing which portion of the string needs to be matched.
+    1. `string` — A *JSON string* representing the string to be matched.
+    2. `fragment` — A *JSON string* describing which portion of the string needs to be matched.
        Currently, only the value "`whole`" is supported, which corresponds to matching the entire
        string.
 
