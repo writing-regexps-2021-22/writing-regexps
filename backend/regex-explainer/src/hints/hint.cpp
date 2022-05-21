@@ -45,8 +45,9 @@ namespace wr22::regex_explainer::hints {
 
         std::string additional_info;
 
-        if (error.expected() == "?" || error.expected() == "*" || error.expected() == "+") {
-            additional_info = error.expected() + " The preceding token is not quantifiable";
+        if (error.char_got() == U'?' || error.char_got() == U'*' || error.char_got() == U'+') {
+            additional_info = wr22::unicode::to_utf8(error.char_got())
+                              + " The preceding token is not quantifiable";
         }
 
         return Hint{hint, additional_info};

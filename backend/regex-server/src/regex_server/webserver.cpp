@@ -1,5 +1,6 @@
 // wr22
 #include <wr22/regex_explainer/explanation/explanation.hpp>
+#include <wr22/regex_explainer/hints/hint.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_server/service_error.hpp>
@@ -85,20 +86,24 @@ namespace {
             error_code = "expected_end";
             error_data["position"] = e.position();
             error_data["char_got"] = wr22::unicode::to_utf8(e.char_got());
+            error_data["hint"] = regex_explainer::hints::get_hint(e);
         } catch (const err::UnexpectedChar& e) {
             error_code = "unexpected_char";
             error_data["position"] = e.position();
             error_data["char_got"] = wr22::unicode::to_utf8(e.char_got());
             error_data["expected"] = e.expected();
+            error_data["hint"] = regex_explainer::hints::get_hint(e);
         } catch (const err::UnexpectedEnd& e) {
             error_code = "unexpected_end";
             error_data["position"] = e.position();
             error_data["expected"] = e.expected();
+            error_data["hint"] = regex_explainer::hints::get_hint(e);
         } catch (const err::InvalidRange& e) {
             error_code = "invalid_range";
             error_data["span"] = e.span();
             error_data["first"] = wr22::unicode::to_utf8(e.first());
             error_data["last"] = wr22::unicode::to_utf8(e.last());
+            error_data["hint"] = regex_explainer::hints::get_hint(e);
         } catch (const err::ParseError& e) {
             throw std::runtime_error(fmt::format("Unknown parse error: {}", e.what()));
         }
