@@ -8,4 +8,5 @@ find_package(Crow)
 
 add_subdirectory(unicode)
 add_subdirectory(regex-parser)
+add_subdirectory(regex-explainer)
 add_subdirectory(regex-server)

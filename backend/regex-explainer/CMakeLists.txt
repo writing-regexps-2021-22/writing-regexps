@@ -16,7 +16,7 @@ target_compile_options(
 target_link_libraries(
         wr22-regex-explainer
         PUBLIC
-        fmt
+        fmt::fmt
         wr22-regex-parser
         wr22-unicode
 )
