@@ -13,3 +13,8 @@ target_compile_options(
         -Werror=switch
         -pedantic
 )
+target_link_libraries(
+    wr22-unicode
+    PUBLIC
+        Boost::boost
+)
