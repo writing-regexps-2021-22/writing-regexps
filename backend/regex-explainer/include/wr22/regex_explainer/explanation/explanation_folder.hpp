@@ -11,7 +11,7 @@
 
 namespace wr22::regex_explainer::explanation {
 
-    typedef std::variant<std::string_view, std::u32string_view, uint32_t> type_of_sentence;
+    typedef std::variant<std::string, std::u32string, uint32_t> type_of_sentence;
 
     class Explanation {
     public:
