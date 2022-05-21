@@ -1,5 +1,3 @@
-#pragma once
-
 // wr22
 #include "wr22/regex_explainer/hints/hint.hpp"
 

@@ -26,36 +26,36 @@ namespace wr22::regex_explainer::explanation {
     /// depending on the type of the argument it takes.
     ///
     /// The function for type "Empty" is always default because it does not have any meaningful information.
-    std::string_view get_sample(const Empty &vertex);
+    std::string get_sample(const Empty &vertex);
 
     /// The function describes which literal matched and what index it has in the ASCII table.
     /// The function is case sensitive.
-    std::vector<std::string_view> get_sample(const Literal &vertex);
+    std::vector<std::string> get_sample(const Literal &vertex);
 
     /// The function lists all alternatives that needed to be mached and describes each one in detail.
-    std::string_view get_sample(const Alternatives &vertex);
+    std::string get_sample(const Alternatives &vertex);
 
     /// The function lists all items of the sequence list and match there explanation one after another.
     /// There is no information about the type of this vertex.
-    std::string_view get_sample(const Sequence &vertex);
+    std::string get_sample(const Sequence &vertex);
 
     /// he function says that it is group and describes it in detail.
-    std::string_view get_sample(const Group &vertex);
+    std::string get_sample(const Group &vertex);
 
     /// Next three functions return the explanation of some quantifier.
     /// They are always the same and do not require any modifications depending on the situation.
-    std::string_view get_sample(const Optional &vertex);
+    std::string get_sample(const Optional &vertex);
 
-    std::string_view get_sample(const Plus &vertex);
+    std::string get_sample(const Plus &vertex);
 
-    std::string_view get_sample(const Star &vertex);
+    std::string get_sample(const Star &vertex);
 
     /// The function returns the explanation for some regex basic that is always the same
     /// and does not require any modifications depending on the situation.
-    std::string_view get_sample(const Wildcard &vertex);
+    std::string get_sample(const Wildcard &vertex);
 
     /// The function lists the symbols from the certain set that need to be matched.
     /// The function is case sensitive.
-    std::vector<std::string_view> get_sample(const CharacterClass &vertex);
+    std::vector<std::string> get_sample(const CharacterClass &vertex);
 
 }  // namespace wr22::regex_explainer::explanation
