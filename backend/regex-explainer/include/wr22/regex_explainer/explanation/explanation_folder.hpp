@@ -6,7 +6,7 @@
 
 // STL
 #include <nlohmann/json_fwd.hpp>
-#include <string_view>
+#include <string>
 
 // variant
 #include <variant>
@@ -16,7 +16,7 @@
 
 namespace wr22::regex_explainer::explanation {
 
-typedef wr22::utils::Adt<std::string_view, std::u32string_view, uint32_t> type_of_sentence;
+typedef wr22::utils::Adt<std::string, std::u32string, uint32_t> type_of_sentence;
 
 class Explanation {
 public:

@@ -7,6 +7,6 @@
 
 namespace wr22::regex_explainer::explanation {
 
-std::string upgrade_sample(const std::string& symbol, const std::string_view& sample);
+std::string upgrade_sample(const std::string& symbol, const std::string& sample);
 
 }  // namespace wr22::regex_explainer::explanation

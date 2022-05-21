@@ -1,5 +1,6 @@
 // wr22
 #include <wr22/regex_explainer/explanation/explanation_folder.hpp>
+#include <wr22/unicode/conversion.hpp>
 
 namespace wr22::regex_explainer::explanation {
 
@@ -26,8 +27,10 @@ void to_json(nlohmann::json& j, const Explanation& explanation) {
     j["bold"] = explanation.is_bold();
     auto& json_explanation = j["explanation"];
     explanation.get_explanation().visit(
-        [&json_explanation](const std::string_view& sv) { json_explanation = sv; },
-        [&json_explanation](const std::u32string_view& sv) { json_explanation = sv; },
+        [&json_explanation](const std::string& sv) { json_explanation = sv; },
+        [&json_explanation](const std::u32string& sv) {
+            json_explanation = wr22::unicode::to_utf8(sv);
+        },
         [&json_explanation](uint32_t num) { json_explanation = num; });
 }
 
