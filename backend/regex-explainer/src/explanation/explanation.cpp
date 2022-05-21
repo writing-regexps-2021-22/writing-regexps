@@ -57,7 +57,7 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
 
         [&result, depth](const Sequence& part) {
             for (const auto& item : part.items) {
-                auto inner_result = get_full_explanation(item, depth + 1);
+                auto inner_result = get_full_explanation(item, depth);
 
                 for (auto& inner_result_explanation : inner_result) {
                     result.emplace_back(inner_result_explanation);
@@ -80,7 +80,9 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
             auto sample = get_sample(part);
 
             auto inner_result = get_full_explanation(*part.inner, depth);
-            result.emplace_back(inner_result[0]);
+            for (auto& inner_result_explanation : inner_result) {
+                result.emplace_back(inner_result_explanation);
+            }
 
             auto upgraded_sample = upgrade_sample("?", sample);
             result.emplace_back(upgraded_sample, depth);
@@ -90,7 +92,9 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
             auto sample = get_sample(part);
 
             auto inner_result = get_full_explanation(*part.inner, depth);
-            result.emplace_back(inner_result[0]);
+            for (auto& inner_result_explanation : inner_result) {
+                result.emplace_back(inner_result_explanation);
+            }
 
             auto upgraded_sample = upgrade_sample("+", sample);
             result.emplace_back(upgraded_sample, depth);
@@ -100,7 +104,9 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
             auto sample = get_sample(part);
 
             auto inner_result = get_full_explanation(*part.inner, depth);
-            result.emplace_back(inner_result[0]);
+            for (auto& inner_result_explanation : inner_result) {
+                result.emplace_back(inner_result_explanation);
+            }
 
             auto upgraded_sample = upgrade_sample("*", sample);
             result.emplace_back(upgraded_sample, depth);
@@ -119,26 +125,29 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
 
             result.emplace_back(sample[0], depth, true);
 
-            size_t counter = 1;
             for (const auto& spanned_range : part.data.ranges) {
 
-                auto first = std::u32string(1, spanned_range.range.first());
-                auto last = std::u32string(1, spanned_range.range.last());
+                if (spanned_range.range.is_single_character()) {
+                    auto literal = Literal(spanned_range.range.first());
+                    SpannedPart literal_spanned_part = SpannedPart(literal, spanned_range.span);
+                    get_full_explanation(literal_spanned_part, depth);
+                } else {
+                    auto first = std::u32string(1, spanned_range.range.first());
+                    auto last = std::u32string(1, spanned_range.range.last());
 
-                result.emplace_back(first, depth + counter);
-                result.emplace_back("-", depth + counter);
-                result.emplace_back(last, depth + counter);
-                result.emplace_back(sample[1], depth + counter);
-                result.emplace_back(first, depth + counter);
-                result.emplace_back(sample[2], depth + counter);
-                result.emplace_back(last, depth + counter);
-                result.emplace_back(sample[3], depth + counter);
-
-                counter++;
+                    result.emplace_back(first, depth);
+                    result.emplace_back("-", depth);
+                    result.emplace_back(last, depth);
+                    result.emplace_back(sample[1], depth);
+                    result.emplace_back(first, depth);
+                    result.emplace_back(sample[2], depth);
+                    result.emplace_back(last, depth);
+                    result.emplace_back(sample[3], depth);
+                }
             }
 
             if (part.data.inverted) {
-                result.emplace_back("(inverted)", depth + counter);
+                result.emplace_back("(inverted)", depth);
             }
         });
 
