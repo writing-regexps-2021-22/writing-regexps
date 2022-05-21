@@ -85,7 +85,7 @@ public:
         std::vector<regex::SpannedPart> alternatives;
         alternatives.push_back(std::move(part));
         while (lookahead() == U'|') {
-            advance(1, "`|`");
+            advance(1, "`|`", std::nullopt);
             alternatives.push_back(parse_sequence_or_empty());
         }
         return make_spanned(begin, regex::part::Alternatives(std::move(alternatives)));
@@ -138,7 +138,9 @@ public:
     regex::SpannedPart parse_atom() {
         auto begin = track_pos();
         std::optional<regex::SpannedPart> result;
-        auto la1 = lookahead_nonempty("an openning parenthesis (`(`) or a plain character");
+        auto la1 = lookahead_nonempty(
+            "an openning parenthesis (`(`) or a plain character",
+            std::nullopt);
         if (la1 == U'(') {
             result = parse_group();
         } else if (la1 == U'.') {
@@ -153,15 +155,21 @@ public:
 
         auto la2 = lookahead();
         if (la2 == U'?') {
-            expect_char(U'?', "a question mark denoting an optional quantifier (`?`)");
+            expect_char(U'?', "a question mark denoting an optional quantifier (`?`)", std::nullopt);
             return make_spanned(begin, regex::part::Optional(std::move(result.value())));
         }
         if (la2 == U'*') {
-            expect_char(U'*', "an asterisk denoting an \"at least zero\" quantifier (`*`)");
+            expect_char(
+                U'*',
+                "an asterisk denoting an \"at least zero\" quantifier (`*`)",
+                std::nullopt);
             return make_spanned(begin, regex::part::Star(std::move(result.value())));
         }
         if (la2 == U'+') {
-            expect_char(U'+', "a plus sign denoting an \"at least one\" quantifier (`+`)");
+            expect_char(
+                U'+',
+                "a plus sign denoting an \"at least one\" quantifier (`+`)",
+                std::nullopt);
             return make_spanned(begin, regex::part::Plus(std::move(result.value())));
         }
         return std::move(result.value());
@@ -175,7 +183,7 @@ public:
     /// @throws errors::UnexpectedChar if the next input character is not `.`.
     regex::SpannedPart parse_wildcard() {
         auto position = m_pos;
-        expect_char(U'.', "the wildcard character (`.`)");
+        expect_char(U'.', "the wildcard character (`.`)", std::nullopt);
         return regex::SpannedPart(regex::part::Wildcard(), Span::make_single_position(position));
     }
 
@@ -186,7 +194,7 @@ public:
     /// @throws errors::UnexpectedEnd if all characters from the input have already been consumed.
     regex::SpannedPart parse_char_literal() {
         auto position = m_pos;
-        auto c = next_char_validated(is_valid_for_char_literal, "a plain character");
+        auto c = next_char_validated(is_valid_for_char_literal, "a plain character", std::nullopt);
         return regex::SpannedPart(regex::part::Literal(c), Span::make_single_position(position));
     }
 
@@ -196,28 +204,32 @@ public:
     regex::SpannedPart parse_group() {
         auto begin = track_pos();
 
-        expect_char(U'(', "an opening parenthesis (`(`)");
+        expect_char(U'(', "an opening parenthesis (`(`)", std::nullopt);
         auto la = lookahead_nonempty(
-            "a closing parenthesis (`)`), a character in a group or a group capture specification");
+            "a closing parenthesis (`)`), a character in a group or a group capture specification",
+            U')');
 
         // Default-capture (by index) group.
         if (la != U'?') {
             auto inner = parse_regex();
-            expect_char(U')', "a closing parenthesis (`)`)");
+            expect_char(U')', "a closing parenthesis (`)`)", U')');
             return make_spanned(
                 begin,
                 regex::part::Group(regex::capture::Index(), std::move(inner)));
         }
-        expect_char(U'?', "a question mark beginning a group capture specification (`?`)");
+        expect_char(
+            U'?',
+            "a question mark beginning a group capture specification (`?`)",
+            std::nullopt);
 
         constexpr auto expected_msg = "a group capture specification (the part after `?`)";
-        la = lookahead_nonempty(expected_msg);
+        la = lookahead_nonempty(expected_msg, std::nullopt);
 
         // Uncaptured group.
         if (la == U':') {
-            expect_char(U':', "a colon (`:`)");
+            expect_char(U':', "a colon (`:`)", std::nullopt);
             auto inner = parse_regex();
-            expect_char(U')', "a closing parenthesis (`)`)");
+            expect_char(U')', "a closing parenthesis (`)`)", U')');
             return make_spanned(begin, regex::part::Group(regex::capture::None(), std::move(inner)));
         }
 
@@ -228,13 +240,13 @@ public:
             bool has_p = false;
             if (la == U'P') {
                 has_p = true;
-                expect_char(U'P', "a capture group name marker (`P`)");
+                expect_char(U'P', "a capture group name marker (`P`)", std::nullopt);
             }
-            expect_char(U'<', "an opening delimiter for a capture group name (`<`)");
+            expect_char(U'<', "an opening delimiter for a capture group name (`<`)", std::nullopt);
             auto&& [group_name, group_name_span] = parse_group_name();
-            expect_char(U'>', "a closing delimiter for a capture group name (`>`)");
+            expect_char(U'>', "a closing delimiter for a capture group name (`>`)", U'>');
             auto inner = parse_regex();
-            expect_char(U')', "a closing parenthesis (`)`)");
+            expect_char(U')', "a closing parenthesis (`)`)", U')');
             auto flavor = has_p ? regex::NamedCaptureFlavor::AnglesWithP
                                 : regex::NamedCaptureFlavor::Angles;
             return make_spanned(
@@ -246,11 +258,11 @@ public:
 
         // `(?'name'contents)` flavor.
         if (la == U'\'') {
-            expect_char(U'\'', "an opening delimiter for a capture group name (`'`)");
+            expect_char(U'\'', "an opening delimiter for a capture group name (`'`)", std::nullopt);
             auto&& [group_name, group_name_span] = parse_group_name();
-            expect_char(U'\'', "a closing delimiter for a capture group name (`'`)");
+            expect_char(U'\'', "a closing delimiter for a capture group name (`'`)", U'\'');
             auto inner = parse_regex();
-            expect_char(U')', "a closing parenthesis (`)`)");
+            expect_char(U')', "a closing parenthesis (`)`)", U')');
             return make_spanned(
                 begin,
                 regex::part::Group(
@@ -270,7 +282,7 @@ public:
         auto begin_pos = m_pos;
 
         constexpr auto first_char_expected_msg = "the first character of a capture group name";
-        auto la = lookahead_nonempty(first_char_expected_msg);
+        auto la = lookahead_nonempty(first_char_expected_msg, std::nullopt);
         if (!is_valid_for_group_name(la)) {
             throw errors::UnexpectedChar(m_pos, la, first_char_expected_msg);
         }
@@ -279,7 +291,7 @@ public:
         wr22::unicode::to_utf8_append(group_name, next_char().value());
         while (true) {
             constexpr auto next_char_expected_msg = "a character of a capture group name";
-            auto la = lookahead_nonempty(next_char_expected_msg);
+            auto la = lookahead_nonempty(next_char_expected_msg, std::nullopt);
             if (!is_valid_for_group_name(la)) {
                 break;
             }
@@ -299,7 +311,7 @@ public:
         using span::Span;
 
         auto begin = track_pos();
-        expect_char(U'[', "an opening bracket");
+        expect_char(U'[', "an opening bracket", std::nullopt);
 
         bool inverted = false;
         std::vector<SpannedCharacterRange> ranges;
@@ -322,7 +334,8 @@ public:
             while (true) {
                 // Read the next character.
                 auto c = next_char_nonempty(
-                    "a character, a character range, or a closing bracket (']')");
+                    "a character, a character range, or a closing bracket (']')",
+                    U']');
 
                 // State transitions.
                 if (c == U'^' && state == State::Initial) {
@@ -474,13 +487,15 @@ private:
 
     /// Peek the next character, without consuming it.
     ///
+    /// @param needs_closing the character describing the parenthesis that needs to be closed.
+    ///
     /// @throws UnexpectedEnd if the end of input has been reached.
     ///
     /// @returns the next character from the input.
-    char32_t lookahead_nonempty(std::string_view expected) {
+    char32_t lookahead_nonempty(std::string_view expected, std::optional<char32_t> needs_closing) {
         auto opt = lookahead();
         if (!opt.has_value()) {
-            throw errors::UnexpectedEnd(m_pos, std::string(expected));
+            throw errors::UnexpectedEnd(m_pos, std::string(expected), needs_closing);
         }
         return opt.value();
     }
@@ -503,8 +518,11 @@ private:
     /// @returns the next character from the input.
     ///
     /// @throws UnexpectedEnd if the end of input has been reached.
-    char32_t next_char_nonempty(std::string_view expected) {
-        return next_char_validated([]([[maybe_unused]] auto c) { return true; }, expected);
+    char32_t next_char_nonempty(std::string_view expected, std::optional<char32_t> needs_closing) {
+        return next_char_validated(
+            []([[maybe_unused]] auto c) { return true; },
+            expected,
+            needs_closing);
     }
 
     /// Peek the next character, validate it and consume it.
@@ -512,17 +530,21 @@ private:
     /// @param predicate a function that takes the character from the input and returns `true` if it
     /// is valid (expected) or `false` otherwise.
     /// @param expected_msg a description of what kind of characters are expected.
+    /// @param needs_closing the character describing the parenthesis that needs to be closed.
     ///
     /// @throws UnexpectedChar if the validation fails.
     /// @throws UnexpectedEnd if the end of input has been reached.
     ///
     /// @returns the next character from the input.
     template <typename F>
-    char32_t next_char_validated(const F& predicate, std::string_view expected_msg) {
+    char32_t next_char_validated(
+        const F& predicate,
+        std::string_view expected_msg,
+        std::optional<char32_t> needs_closing) {
         auto c_opt = next_char();
         if (!c_opt.has_value()) {
             // m_pos not changed by `next_char()`.
-            throw errors::UnexpectedEnd(m_pos, std::string(expected_msg));
+            throw errors::UnexpectedEnd(m_pos, std::string(expected_msg), needs_closing);
         }
         auto c = c_opt.value();
         if (!predicate(c)) {
@@ -534,10 +556,18 @@ private:
 
     /// Peek the next character and verify that it is the same as expected.
     ///
+    /// @param needs_closing the character describing the parenthesis that needs to be closed.
+    ///
     /// @throws errors::UnexpectedChar if the expectations are not met.
     /// @throws errors::UnexpectedEnd if the end of input has been reached.
-    void expect_char(char32_t expected_char, std::string_view expected_msg) {
-        next_char_validated([expected_char](auto c) { return c == expected_char; }, expected_msg);
+    void expect_char(
+        char32_t expected_char,
+        std::string_view expected_msg,
+        std::optional<char32_t> needs_closing) {
+        next_char_validated(
+            [expected_char](auto c) { return c == expected_char; },
+            expected_msg,
+            needs_closing);
     }
 
     /// Discard several next characters from the input.
@@ -545,13 +575,17 @@ private:
     /// @param num_skipped_chars the number of characters to discard.
     /// @param expected the description of what the characters skipped should look like. It is
     /// incorporated into an exception if the input ends prematurely.
+    /// @param needs_closing the character describing the parenthesis that needs to be closed.
     ///
     /// @throws errors::UnexpectedEnd if the end of input has been reached before all requested
     /// characters have been discarded.
-    void advance(size_t num_skipped_chars, std::string_view expected) {
+    void advance(
+        size_t num_skipped_chars,
+        std::string_view expected,
+        std::optional<char32_t> needs_closing) {
         for (size_t i = 0; i < num_skipped_chars; ++i) {
             if (m_iter == m_end) {
-                throw errors::UnexpectedEnd(m_pos, std::string(expected));
+                throw errors::UnexpectedEnd(m_pos, std::string(expected), needs_closing);
             }
             ++m_iter;
             ++m_pos;

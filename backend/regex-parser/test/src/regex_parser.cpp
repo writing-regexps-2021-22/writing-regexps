@@ -159,7 +159,8 @@ TEST_CASE("Groups", "[regex]") {
     CHECK_THROWS_MATCHES(
         parse_regex(U"(a"),
         UnexpectedEnd,
-        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 2; }));
+        Predicate<UnexpectedEnd>(
+            [](const auto& e) { return e.position() == 2 && e.needs_closing() == U')'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"(?a)"),
         UnexpectedChar,
@@ -855,23 +856,28 @@ TEST_CASE("Character classes") {
     CHECK_THROWS_MATCHES(
         parse_regex(U"["),
         UnexpectedEnd,
-        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 1; }));
+        Predicate<UnexpectedEnd>(
+            [](const auto& e) { return e.position() == 1 && e.needs_closing() == U']'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"[]"),
         UnexpectedEnd,
-        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 2; }));
+        Predicate<UnexpectedEnd>(
+            [](const auto& e) { return e.position() == 2 && e.needs_closing() == U']'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"[-"),
         UnexpectedEnd,
-        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 2; }));
+        Predicate<UnexpectedEnd>(
+            [](const auto& e) { return e.position() == 2 && e.needs_closing() == U']'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"[abc"),
         UnexpectedEnd,
-        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 4; }));
+        Predicate<UnexpectedEnd>(
+            [](const auto& e) { return e.position() == 4 && e.needs_closing() == U']'; }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"[abc"),
         UnexpectedEnd,
-        Predicate<UnexpectedEnd>([](const auto& e) { return e.position() == 4; }));
+        Predicate<UnexpectedEnd>(
+            [](const auto& e) { return e.position() == 4 && e.needs_closing() == U']'; }));
 }
 
 TEST_CASE("Character classes as atoms", "[regex]") {

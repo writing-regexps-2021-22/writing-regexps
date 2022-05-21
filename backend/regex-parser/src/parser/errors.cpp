@@ -8,10 +8,19 @@
 
 namespace wr22::regex_parser::parser::errors {
 
-UnexpectedEnd::UnexpectedEnd(size_t position, std::string expected)
-    : ParseError(
-        fmt::format("Unexpected end of input at position {}: expected {}", position, expected)),
-      m_position(position), m_expected(std::move(expected)) {}
+UnexpectedEnd::UnexpectedEnd(
+    size_t position,
+    std::string expected,
+    std::optional<char32_t> needs_closing)
+    : ParseError(fmt::format(
+        "Unexpected end of input at position {}: expected {}{}",
+        position,
+        expected,
+        needs_closing.has_value() ? fmt::format(
+            " and, at some point, a `{}` to close the current expression part",
+            wr22::unicode::to_utf8(needs_closing.value()))
+                                  : std::string())),
+      m_position(position), m_expected(std::move(expected)), m_needs_closing(needs_closing) {}
 
 size_t UnexpectedEnd::position() const {
     return m_position;
@@ -19,6 +28,10 @@ size_t UnexpectedEnd::position() const {
 
 const std::string& UnexpectedEnd::expected() const {
     return m_expected;
+}
+
+std::optional<char32_t> UnexpectedEnd::needs_closing() const {
+    return m_needs_closing;
 }
 
 ExpectedEnd::ExpectedEnd(size_t position, char32_t char_got)
