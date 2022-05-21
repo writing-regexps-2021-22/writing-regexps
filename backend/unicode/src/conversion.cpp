@@ -1,10 +1,9 @@
 // wr22
-#include <boost/locale/encoding_errors.hpp>
-#include <boost/locale/utf.hpp>
 #include <wr22/unicode/conversion.hpp>
 
 // stl
 #include <iterator>
+#include <string>
 
 // boost
 #include <boost/locale/encoding_utf.hpp>
