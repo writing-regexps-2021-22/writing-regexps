@@ -5,7 +5,7 @@
 #include <memory>
 #include <utility>
 
-namespace wr22::regex_parser::utils {
+namespace wr22::utils {
 
 struct BoxIsEmpty : public std::exception {
     const char* what() const noexcept override;
@@ -107,4 +107,4 @@ bool operator!=(const Box<T>& lhs, const Box<U>& rhs) {
     return !(lhs == rhs);
 }
 
-}  // namespace wr22::regex_parser::utils
+}  // namespace wr22::utils

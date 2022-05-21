@@ -2,7 +2,7 @@
 
 // wr22
 #include <wr22/regex_parser/regex/named_capture_flavor.hpp>
-#include <wr22/regex_parser/utils/adt.hpp>
+#include <wr22/utils/adt.hpp>
 
 // stl
 #include <iosfwd>
