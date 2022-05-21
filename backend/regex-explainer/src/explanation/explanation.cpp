@@ -131,7 +131,10 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
                 if (spanned_range.range.is_single_character()) {
                     auto literal = Literal(spanned_range.range.first());
                     SpannedPart literal_spanned_part = SpannedPart(literal, spanned_range.span);
-                    get_full_explanation(literal_spanned_part, depth);
+                    auto explanation = get_full_explanation(literal_spanned_part, depth);
+                    for (auto&& inner_result_explanation : explanation) {
+                        result.emplace_back(std::move(inner_result_explanation));
+                    }
                 } else {
                     auto first = std::u32string(1, spanned_range.range.first());
                     auto last = std::u32string(1, spanned_range.range.last());
