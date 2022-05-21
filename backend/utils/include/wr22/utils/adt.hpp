@@ -4,7 +4,7 @@
 #include <utility>
 #include <variant>
 
-namespace wr22::regex_parser::utils {
+namespace wr22::utils {
 
 namespace detail::adt {
     // https://en.cppreference.com/w/cpp/utility/variant/visit#Example provides a very similar
@@ -117,4 +117,4 @@ bool operator!=(const Adt<Variants...>& lhs, const Adt<Variants...>& rhs) {
     return !(lhs == rhs);
 }
 
-}  // namespace wr22::regex_parser::utils
+}  // namespace wr22::utils

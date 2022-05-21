@@ -1,4 +1,5 @@
 // wr22
+#include <wr22/regex_explainer/explanation/explanation.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_server/service_error.hpp>
@@ -116,6 +117,8 @@ namespace {
 Webserver::Webserver() {
     CROW_ROUTE(m_app, "/parse")
         .methods(crow::HTTPMethod::POST)(handle_errors_in(*this, &Webserver::parse_handler));
+    CROW_ROUTE(m_app, "/explain")
+        .methods(crow::HTTPMethod::POST)(handle_errors_in(*this, &Webserver::explain_handler));
 }
 
 void Webserver::run() {
@@ -144,6 +147,41 @@ nlohmann::json Webserver::parse_handler(
         try {
             auto regex_string_utf32 = wr22::unicode::from_utf8(regex_string);
             return parse_regex_to_json(regex_string_utf32);
+        } catch (const boost::locale::conv::conversion_error& e) {
+            throw service_error::InvalidUtf8{};
+        }
+    } else {
+        throw service_error::InvalidRequestJsonStructure{};
+    }
+}
+
+nlohmann::json Webserver::explain_handler(
+    [[maybe_unused]] const crow::request& request,
+    crow::response& response) {
+    const auto request_json = nlohmann::json::parse(request.body, nullptr, false);
+    if (request_json.is_discarded()) {
+        throw service_error::InvalidRequestJson{};
+    }
+
+    if (!request_json.is_object()) {
+        throw service_error::InvalidRequestJsonStructure{};
+    }
+
+    if (auto it = request_json.find("regex"); it != request_json.end()) {
+        const auto& regex_json_string = *it;
+        if (!regex_json_string.is_string()) {
+            throw service_error::InvalidRequestJsonStructure{};
+        }
+
+        auto regex_string = regex_json_string.get<std::string>();
+        try {
+            auto regex_string_utf32 = wr22::unicode::from_utf8(regex_string);
+            auto root_part = wr22::regex_parser::parser::parse_regex(regex_string_utf32);
+            auto full_explanation = wr22::regex_explainer::explanation::get_full_explanation(
+                root_part);
+            auto response_json = nlohmann::json::object();
+            response_json["explanation"] = full_explanation;
+            return response_json;
         } catch (const boost::locale::conv::conversion_error& e) {
             throw service_error::InvalidUtf8{};
         }

@@ -25,6 +25,7 @@ target_link_libraries(
         Crow::Crow
         spdlog::spdlog
         wr22-regex-parser
+        wr22-regex-explainer
 )
 
 add_executable(wr22-regex-server "src/main.cpp")
