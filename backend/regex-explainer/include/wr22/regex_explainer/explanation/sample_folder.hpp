@@ -40,7 +40,7 @@ namespace wr22::regex_explainer::explanation {
     std::string get_sample(const Sequence &vertex);
 
     /// he function says that it is group and describes it in detail.
-    std::string get_sample(const Group &vertex);
+    std::vector<std::string> get_sample(const Group &vertex);
 
     /// Next three functions return the explanation of some quantifier.
     /// They are always the same and do not require any modifications depending on the situation.
