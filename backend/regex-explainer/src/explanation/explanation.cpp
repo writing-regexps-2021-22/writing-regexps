@@ -80,24 +80,36 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
         [&result, depth](const Optional& part) {
             auto sample = get_sample(part);
 
-            auto upgraded_sample = upgrade_sample("?", sample);
+            auto inner_result = get_full_explanation(*part.inner, depth);
+            for (auto& inner_result_explanation : inner_result) {
+                result.emplace_back(inner_result_explanation);
+            }
 
+            auto upgraded_sample = upgrade_sample("?", sample);
             result.emplace_back(upgraded_sample, depth);
         },
 
         [&result, depth](const Plus& part) {
             auto sample = get_sample(part);
 
-            auto upgraded_sample = upgrade_sample("+", sample);
+            auto inner_result = get_full_explanation(*part.inner, depth);
+            for (auto& inner_result_explanation : inner_result) {
+                result.emplace_back(inner_result_explanation);
+            }
 
+            auto upgraded_sample = upgrade_sample("+", sample);
             result.emplace_back(upgraded_sample, depth);
         },
 
         [&result, depth](const Star& part) {
             auto sample = get_sample(part);
 
-            auto upgraded_sample = upgrade_sample("*", sample);
+            auto inner_result = get_full_explanation(*part.inner, depth);
+            for (auto& inner_result_explanation : inner_result) {
+                result.emplace_back(inner_result_explanation);
+            }
 
+            auto upgraded_sample = upgrade_sample("*", sample);
             result.emplace_back(upgraded_sample, depth);
         },
 
