@@ -68,7 +68,13 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
 
         [&result, depth](const Group& part) {
             auto sample = get_sample(part);
-            result.emplace_back(sample, depth, true);
+
+            size_t index = part.capture.visit(
+                [](const regex_parser::regex::capture::Index& capture_type) { return 0; },
+                [](const regex_parser::regex::capture::None& capture_type) { return 1; },
+                [](const regex_parser::regex::capture::Name& capture_type) { return 2; });
+
+            result.emplace_back(sample[index], depth, true);
 
             auto inner_result = get_full_explanation(*part.inner, depth + 1);
 
@@ -131,7 +137,11 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
                 if (spanned_range.range.is_single_character()) {
                     auto literal = Literal(spanned_range.range.first());
                     SpannedPart literal_spanned_part = SpannedPart(literal, spanned_range.span);
-                    get_full_explanation(literal_spanned_part, depth);
+
+                    auto inner_result = get_full_explanation(literal_spanned_part, depth);
+                    for (auto& inner_result_explanation : inner_result) {
+                        result.emplace_back(inner_result_explanation);
+                    }
                 } else {
                     auto first = std::u32string(1, spanned_range.range.first());
                     auto last = std::u32string(1, spanned_range.range.last());
