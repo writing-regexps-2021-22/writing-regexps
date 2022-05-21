@@ -28,7 +28,7 @@ namespace wr22::regex_explainer::explanation {
                     auto sample = get_sample(part);
 
                     auto literal = std::u32string_view(
-                            reinterpret_cast<const char32_t *>(part.character),
+                            &part.character,
                             1);
 
                     auto encode_literal = static_cast<uint32_t>(literal[0]);

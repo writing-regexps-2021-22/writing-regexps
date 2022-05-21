@@ -2,46 +2,37 @@
 
 // wr22
 #include "wr22/regex_explainer/explanation/explanation_folder.hpp"
+#include "wr22/utils/adt.hpp"
 
 // STL
+#include <nlohmann/json_fwd.hpp>
 #include <string_view>
 
 // variant
 #include <variant>
 
+// nlohmann
+#include <nlohmann/json.hpp>
+
 namespace wr22::regex_explainer::explanation {
 
-    typedef std::variant<std::string_view, std::u32string_view, uint32_t> type_of_sentence;
+typedef wr22::utils::Adt<std::string_view, std::u32string_view, uint32_t> type_of_sentence;
 
-    class Explanation {
-    public:
-        Explanation() : explanation(""), depth(0), bold(false) {}
+class Explanation {
+public:
+    Explanation();
+    Explanation(type_of_sentence explanation_, size_t depth_, bool bold_ = false);
 
-        Explanation(type_of_sentence explanation_, size_t depth_, bool bold_ = false) {
-            explanation = explanation_;
-            depth = depth_;
-            bold = bold_;
-        }
+    type_of_sentence get_explanation() const;
+    [[nodiscard]] size_t get_depth() const;
+    [[nodiscard]] bool is_bold() const;
 
-        template<class String_view>
-        String_view get_explanation() {
-            std::visit([](auto &&exp) {
-                return exp;
-            }, explanation);
-        }
+private:
+    type_of_sentence explanation;
+    size_t depth;
+    bool bold;
+};
 
-        [[nodiscard]] size_t get_depth() const {
-            return depth;
-        }
+void to_json(nlohmann::json& j, const Explanation& explanation);
 
-        [[nodiscard]] bool is_bold() const {
-            return bold;
-        }
-
-    private:
-        type_of_sentence explanation;
-        size_t depth;
-        bool bold;
-    };
-
-} // wr22::regex_explainer::explanation
+}  // namespace wr22::regex_explainer::explanation

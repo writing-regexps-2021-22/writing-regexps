@@ -5,29 +5,27 @@
 #include <string_view>
 #include <utility>
 
+// nlohmann
+#include <nlohmann/json.hpp>
+
 namespace wr22::regex_explainer::explanation {
 
-    class Hint {
-    public:
-        Hint() : hint(""), additional_info("") {}
+class Hint {
+public:
+    Hint();
+    Hint(std::string hint_, std::string additional_info_ = "");
 
-        Hint(std::string hint_, std::string additional_info_ = "") {
-            hint = std::move(hint_);
-            additional_info = std::move(additional_info_);
-        }
+    std::string get_hint() const;
+    std::string get_additional_information() const;
 
-        std::string get_hint() {
-            return hint;
-        }
+    static constexpr const char* main_sentence =
+        "Your pattern contains one or more errors, please see the explanation section above";
 
-        std::string get_additional_information() {
-            return additional_info;
-        }
+private:
+    std::string hint;
+    std::string additional_info;
+};
 
-    private:
-        std::string main_sentence = "Your pattern contains one or more errors, please see the explanation section above";
-        std::string hint;
-        std::string additional_info;
-    };
+void to_json(nlohmann::json& j, const Hint& hint);
 
-} // wr22::regex_explainer::explanation
+}  // namespace wr22::regex_explainer::explanation
