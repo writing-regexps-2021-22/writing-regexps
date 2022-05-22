@@ -52,6 +52,7 @@ public:
 
     void run_instruction();
     void finalize();
+    void finalize_error();
 
     std::vector<Step> into_steps() &&;
 

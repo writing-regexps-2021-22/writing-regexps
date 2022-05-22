@@ -2,6 +2,7 @@
 #include <wr22/regex_executor/algorithms/backtracking/decision_applicator.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/match_failure.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/part_executor.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/step.hpp>
 #include <wr22/regex_executor/utils/spanned_ref.hpp>
@@ -213,8 +214,7 @@ void Interpreter::run_instruction() {
     while (true) {
         std::cout << " -> enter reconsider loop" << std::endl;
         if (m_decision_snapshots.empty()) {
-            // TODO: signal about failed matching.
-            throw std::runtime_error("String not matched");
+            throw MatchFailure{};
         }
 
         auto last_decision_snapshot = std::move(m_decision_snapshots.back());
@@ -257,6 +257,13 @@ void Interpreter::finalize() {
     add_step(step::End{
         .string_pos = cursor(),
         .result = step::End::Success{},
+    });
+}
+
+void Interpreter::finalize_error() {
+    add_step(step::End{
+        .string_pos = cursor(),
+        .result = step::End::Failure{},
     });
 }
 

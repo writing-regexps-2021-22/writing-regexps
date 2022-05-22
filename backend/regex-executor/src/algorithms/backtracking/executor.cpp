@@ -1,6 +1,7 @@
 // wr22
 #include <wr22/regex_executor/algorithms/backtracking/executor.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/match_failure.hpp>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -12,12 +13,22 @@ const Regex& Executor::regex_ref() const {
 
 MatchResult Executor::execute(const std::u32string_view& string) const {
     auto interpreter = Interpreter(regex_ref(), string);
-    // TODO: handle failure.
-    while (!interpreter.finished()) {
-        interpreter.run_instruction();
+
+    try {
+        while (!interpreter.finished()) {
+            interpreter.run_instruction();
+        }
+        interpreter.finalize();
+    } catch (const MatchFailure&) {
+        interpreter.finalize_error();
+        return MatchResult {
+            .matched = false,
+            .steps = std::move(interpreter).into_steps(),
+        };
     }
-    interpreter.finalize();
+
     return MatchResult {
+        .matched = true,
         .steps = std::move(interpreter).into_steps(),
     };
 }

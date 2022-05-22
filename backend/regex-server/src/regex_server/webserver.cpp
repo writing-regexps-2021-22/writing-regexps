@@ -193,14 +193,8 @@ nlohmann::json Webserver::match_handler(const crow::request& request, crow::resp
             throw service_error::NotImplemented{};
         }
 
-        // TODO: handle match errors.
         auto result = executor.execute(string);
-        auto json_result = nlohmann::json::object();
-        json_result["matched"] = true;
-        // TODO: captures.
-        json_result["algorithm"] = "backtracking";
-        json_result["steps"] = result.steps;
-        match_results.push_back(std::move(json_result));
+        match_results.push_back(std::move(result));
     }
 
     return response_json;
