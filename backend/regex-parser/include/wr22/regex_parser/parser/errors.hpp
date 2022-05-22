@@ -28,7 +28,8 @@ public:
     /// @param position the 0-based position in the input when the parser has encountered the end of
     /// input.
     /// @param expected a textual description of a class of characters expected instead.
-    /// @param needs_closing a character describing the type of bracket that needs to be closed, if any.
+    /// @param needs_closing a character describing the type of bracket that needs to be closed, if
+    /// any.
     UnexpectedEnd(size_t position, std::string expected, std::optional<char32_t> needs_closing);
 
     /// Get the input position. See the constructor docs for a more detailed description.
@@ -75,7 +76,13 @@ public:
     /// unexpected character.
     /// @param char_got the character that the parser has received.
     /// @param expected a textual description of a class of characters expected instead.
-    UnexpectedChar(size_t position, char32_t char_got, std::string expected);
+    /// @param needs_closing a character describing the type of bracket that needs to be closed, if
+    /// any.
+    UnexpectedChar(
+        size_t position,
+        char32_t char_got,
+        std::string expected,
+        std::optional<char32_t> needs_closing);
 
     /// Get the input position. See the constructor docs for a more detailed description.
     size_t position() const;
@@ -85,11 +92,14 @@ public:
     /// Get the description of expected characters. See the constructor docs for a more detailed
     /// description.
     const std::string& expected() const;
+    /// Get the bracket that needs to be closed.
+    std::optional<char32_t> needs_closing() const;
 
 private:
     size_t m_position;
     char32_t m_char_got;
     std::string m_expected;
+    std::optional<char32_t> m_needs_closing;
 };
 
 /// The error indicating that a character range in a character class is invalid.

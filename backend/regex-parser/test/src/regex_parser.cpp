@@ -164,8 +164,9 @@ TEST_CASE("Groups", "[regex]") {
     CHECK_THROWS_MATCHES(
         parse_regex(U"(?a)"),
         UnexpectedChar,
-        Predicate<UnexpectedChar>(
-            [](const auto& e) { return e.position() == 2 && e.char_got() == U'a'; }));
+        Predicate<UnexpectedChar>([](const auto& e) {
+            return e.position() == 2 && e.char_got() == U'a';
+        }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"(?P)"),
         UnexpectedChar,
@@ -182,13 +183,15 @@ TEST_CASE("Groups", "[regex]") {
     CHECK_THROWS_MATCHES(
         parse_regex(U"(?'a)"),
         UnexpectedChar,
-        Predicate<UnexpectedChar>(
-            [](const auto& e) { return e.position() == 4 && e.char_got() == U')'; }));
+        Predicate<UnexpectedChar>([](const auto& e) {
+            return e.position() == 4 && e.char_got() == U')' && e.needs_closing() == U'\'';
+        }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"(?<a)"),
         UnexpectedChar,
-        Predicate<UnexpectedChar>(
-            [](const auto& e) { return e.position() == 4 && e.char_got() == U')'; }));
+        Predicate<UnexpectedChar>([](const auto& e) {
+            return e.position() == 4 && e.char_got() == U')' && e.needs_closing() == U'>';
+        }));
     CHECK_THROWS_MATCHES(
         parse_regex(U"(?>)"),
         UnexpectedChar,

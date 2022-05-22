@@ -272,7 +272,7 @@ public:
                     std::move(inner)));
         }
 
-        throw errors::UnexpectedChar(m_pos, la, expected_msg);
+        throw errors::UnexpectedChar(m_pos, la, expected_msg, std::nullopt);
     }
 
     /// Intermediate rule: parse a group name.
@@ -284,7 +284,7 @@ public:
         constexpr auto first_char_expected_msg = "the first character of a capture group name";
         auto la = lookahead_nonempty(first_char_expected_msg, std::nullopt);
         if (!is_valid_for_group_name(la)) {
-            throw errors::UnexpectedChar(m_pos, la, first_char_expected_msg);
+            throw errors::UnexpectedChar(m_pos, la, first_char_expected_msg, U'>');
         }
 
         std::string group_name;
@@ -549,7 +549,7 @@ private:
         auto c = c_opt.value();
         if (!predicate(c)) {
             // m_pos increased by `next_char()`, subtract 1 to adjust.
-            throw errors::UnexpectedChar(m_pos - 1, c, std::string(expected_msg));
+            throw errors::UnexpectedChar(m_pos - 1, c, std::string(expected_msg), needs_closing);
         }
         return c;
     }
