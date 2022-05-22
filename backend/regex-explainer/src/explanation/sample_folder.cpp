@@ -34,7 +34,6 @@ namespace wr22::regex_explainer::explanation {
         return pattern1;
     }
 
-    /// TO DO
     std::vector<std::string> get_sample(const Group &vertex) {
         std::string pattern1 = "Capturing Group",
                     pattern2 = "Non-Capturing Group",

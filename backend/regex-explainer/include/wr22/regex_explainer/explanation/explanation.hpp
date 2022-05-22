@@ -17,9 +17,11 @@ namespace wr22::regex_explainer::explanation {
 
     /// The function returns the vector processed information about each node of the syntax tree.
     /// Thus, a complete description of the work of the written regular expression is created.
-
-    /// @return a vector of pairs there the first element is some explanation / part of explanation
-    /// and the second is the depth of it.
+    ///
+    /// @param spanned_part is the current node of syntax tree to be explained.
+    /// @param depth is the depth of the current explanation in the resulting tree of explanations.
+    ///
+    /// @return a vector of elements that have type of class Explanation.
     std::vector<Explanation>
     get_full_explanation(const SpannedPart &spanned_part, size_t depth = 0);
 

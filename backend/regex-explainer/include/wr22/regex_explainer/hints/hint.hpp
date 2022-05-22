@@ -19,8 +19,8 @@ namespace wr22::regex_explainer::hints {
 
     /// If any exception was thrown, then there is an error in the regular expression. If the error is related
     /// to syntax, then this function returns a hint on how to fix it.
-    /// In case of other errors, the function returns information about where the failure occurred.
-    Hint get_hint(const ParseError &error);
+    /// In case of other errors, the function returns information about where the failure occurred and
+    /// some additional information in some cases.
 
     Hint get_hint(const UnexpectedEnd &error);
 
