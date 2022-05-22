@@ -30,6 +30,7 @@ struct AlternativesDecision {
 template <typename PartT>
 struct QuantifierDecision {
     using PartType = PartT;
+    size_t min_repetitions;
     std::optional<size_t> num_repetitions;
     std::optional<size_t> actual_num_repetitions;
 

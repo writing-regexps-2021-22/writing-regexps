@@ -201,7 +201,8 @@ bool SpecificPartExecutor<part::CharacterClass>::execute(Interpreter& interprete
 
 template <typename Derived, typename Quantifier>
 QuantifierExecutor<Derived, Quantifier>::QuantifierExecutor(utils::SpannedRef<Quantifier> part_ref)
-    : m_part_ref(part_ref), m_decision{}, m_already_matched(0) {}
+    : m_part_ref(part_ref), m_decision{.min_repetitions = min_repetitions()}, m_already_matched(0) {
+}
 
 template <typename Derived, typename Quantifier>
 QuantifierExecutor<Derived, Quantifier>::QuantifierExecutor(

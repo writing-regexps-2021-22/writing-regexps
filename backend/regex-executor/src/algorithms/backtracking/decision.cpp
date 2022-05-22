@@ -27,13 +27,14 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     Interpreter& interpreter,
     InterpreterStateSnapshot snapshot) const {
     auto current_num_repetitions = num_repetitions.has_value() ? num_repetitions.value()
-                                                               : actual_num_repetitions.value();
+                                                               : actual_num_repetitions.value() + 1;
     // TODO: custom min.
-    if (current_num_repetitions == 0) {
+    if (current_num_repetitions == min_repetitions) {
         return std::nullopt;
     }
     auto new_num_repetitions = current_num_repetitions - 1;
     auto new_decision = QuantifierDecision<PartT>{
+        .min_repetitions = min_repetitions,
         .num_repetitions = new_num_repetitions,
     };
 
@@ -41,10 +42,10 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     state.error_hooks = std::move(snapshot.state.error_hooks);
     state.instructions = std::move(snapshot.state.instructions);
     state.counters = std::move(snapshot.state.counters);
-    //if (state.counters.empty()) {
-    //    throw std::logic_error("")
-    //}
-    //state.counters.back() += new_num_repetitions;
+    // if (state.counters.empty()) {
+    //     throw std::logic_error("")
+    // }
+    // state.counters.back() += new_num_repetitions;
 
     auto maybe_mini_snapshot = interpreter.last_mini_snapshot();
     if (!maybe_mini_snapshot.has_value()) {
@@ -57,7 +58,7 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     interpreter.pop_mini_snapshot();
     interpreter.add_step(step::Backtrack{
         .string_pos = interpreter.cursor(),
-        .continue_after_step = before_step - 1,
+        .continue_after_step = before_step,
     });
 
     return std::move(new_decision);
