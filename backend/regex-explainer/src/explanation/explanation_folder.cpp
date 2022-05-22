@@ -1,13 +1,14 @@
 // wr22
 #include <wr22/regex_explainer/explanation/explanation_folder.hpp>
 #include <wr22/unicode/conversion.hpp>
+#include <utility>
 
 namespace wr22::regex_explainer::explanation {
 
 Explanation::Explanation() : explanation(""), depth(0), bold(false) {}
 
 Explanation::Explanation(type_of_sentence explanation_, size_t depth_, bool bold_)
-    : explanation(explanation_), depth(depth_), bold(bold_) {}
+    : explanation(std::move(explanation_)), depth(depth_), bold(bold_) {}
 
 type_of_sentence Explanation::get_explanation() const {
     return explanation;

@@ -27,7 +27,7 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
 
             auto literal = std::u32string(1, part.character);
 
-            auto encode_literal = static_cast<uint32_t>(literal[0]);
+            auto encode_literal = static_cast<uint32_t>(part.character);
 
             result.emplace_back(literal, depth);
             result.emplace_back(sample[0], depth);

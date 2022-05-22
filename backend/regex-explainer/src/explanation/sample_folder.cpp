@@ -25,7 +25,7 @@ namespace wr22::regex_explainer::explanation {
     }
 
     std::string get_sample(const Alternatives &vertex) {
-        std::string pattern1 = "Alternative";
+        std::string pattern1 = " Alternative";
         return pattern1;
     }
 

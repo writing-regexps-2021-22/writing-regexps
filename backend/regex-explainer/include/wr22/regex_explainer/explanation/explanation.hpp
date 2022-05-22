@@ -6,6 +6,7 @@
 #include "wr22/regex_explainer/explanation/explanation_folder.hpp"
 #include "wr22/regex_explainer/explanation/sample_folder.hpp"
 #include "wr22/regex_explainer/explanation/upgrade_sample.hpp"
+#include "wr22/unicode/conversion.hpp"
 
 // STL
 #include <string_view>
