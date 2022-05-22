@@ -43,25 +43,25 @@ namespace wr22::regex_explainer::explanation {
     }
 
     std::string get_sample(const Optional &vertex) {
-        std::string pattern1 = "matches the previous token between zero and one times, "
+        std::string pattern1 = " matches the previous token between zero and one times, "
                                     "as many times as possible, giving back as needed (greedy)";
         return pattern1;
     }
 
     std::string get_sample(const Plus &vertex) {
-        std::string pattern1 = "matches the previous token between one and unlimited times, "
+        std::string pattern1 = " matches the previous token between one and unlimited times, "
                                     "as many times as possible, giving back as needed (greedy)";
         return pattern1;
     }
 
     std::string get_sample(const Star &vertex) {
-        std::string pattern1 = "matches the previous token between zero and unlimited times, "
+        std::string pattern1 = " matches the previous token between zero and unlimited times, "
                                     "as many times as possible, giving back as needed (greedy)";
         return pattern1;
     }
 
     std::string get_sample(const Wildcard &vertex) {
-        std::string pattern1 = "matches any character (except for line terminators)";
+        std::string pattern1 = " matches any character (except for line terminators)";
         return pattern1;
     }
 
