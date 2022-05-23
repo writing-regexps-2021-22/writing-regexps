@@ -243,7 +243,7 @@ public:
                 expect_char(U'P', "a capture group name marker (`P`)", std::nullopt);
             }
             expect_char(U'<', "an opening delimiter for a capture group name (`<`)", std::nullopt);
-            auto&& [group_name, group_name_span] = parse_group_name();
+            auto&& [group_name, group_name_span] = parse_group_name(U'>');
             expect_char(U'>', "a closing delimiter for a capture group name (`>`)", U'>');
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)", U')');
@@ -259,7 +259,7 @@ public:
         // `(?'name'contents)` flavor.
         if (la == U'\'') {
             expect_char(U'\'', "an opening delimiter for a capture group name (`'`)", std::nullopt);
-            auto&& [group_name, group_name_span] = parse_group_name();
+            auto&& [group_name, group_name_span] = parse_group_name(U'\'');
             expect_char(U'\'', "a closing delimiter for a capture group name (`'`)", U'\'');
             auto inner = parse_regex();
             expect_char(U')', "a closing parenthesis (`)`)", U')');
@@ -278,20 +278,20 @@ public:
     /// Intermediate rule: parse a group name.
     ///
     /// @returns the UTF-8 encoded group name as an `std::string`.
-    std::pair<std::string, Span> parse_group_name() {
+    std::pair<std::string, Span> parse_group_name(char32_t closing_par) {
         auto begin_pos = m_pos;
 
         constexpr auto first_char_expected_msg = "the first character of a capture group name";
-        auto la = lookahead_nonempty(first_char_expected_msg, std::nullopt);
+        auto la = lookahead_nonempty(first_char_expected_msg, closing_par);
         if (!is_valid_for_group_name(la)) {
-            throw errors::UnexpectedChar(m_pos, la, first_char_expected_msg, U'>');
+            throw errors::UnexpectedChar(m_pos, la, first_char_expected_msg, closing_par);
         }
 
         std::string group_name;
         wr22::unicode::to_utf8_append(group_name, next_char().value());
         while (true) {
             constexpr auto next_char_expected_msg = "a character of a capture group name";
-            auto la = lookahead_nonempty(next_char_expected_msg, std::nullopt);
+            auto la = lookahead_nonempty(next_char_expected_msg, closing_par);
             if (!is_valid_for_group_name(la)) {
                 break;
             }

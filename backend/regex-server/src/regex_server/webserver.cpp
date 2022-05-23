@@ -93,11 +93,17 @@ namespace {
             error_data["char_got"] = wr22::unicode::to_utf8(e.char_got());
             error_data["expected"] = e.expected();
             error_data["hint"] = regex_explainer::hints::get_hint(e);
+            if (auto c = e.needs_closing(); c.has_value()) {
+                error_data["needs_closing"] = wr22::unicode::to_utf8(c.value());
+            }
         } catch (const err::UnexpectedEnd& e) {
             error_code = "unexpected_end";
             error_data["position"] = e.position();
             error_data["expected"] = e.expected();
             error_data["hint"] = regex_explainer::hints::get_hint(e);
+            if (auto c = e.needs_closing(); c.has_value()) {
+                error_data["needs_closing"] = wr22::unicode::to_utf8(c.value());
+            }
         } catch (const err::InvalidRange& e) {
             error_code = "invalid_range";
             error_data["span"] = e.span();
