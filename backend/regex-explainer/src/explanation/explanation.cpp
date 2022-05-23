@@ -81,7 +81,7 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
                 });
 
             if (name.has_value()) {
-                sample[index] += " " + name.value();
+                sample[index] += name.value();
             }
 
             result.emplace_back(sample[index], depth, true);
