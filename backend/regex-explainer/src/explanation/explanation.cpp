@@ -4,13 +4,10 @@
 #include "wr22/unicode/conversion.hpp"
 
 // STL
+#include <optional>
 #include <string_view>
-
-// vector
-#include <vector>
-
-// variant
 #include <variant>
+#include <vector>
 
 // fmt
 #include <fmt/format.h>
@@ -86,7 +83,7 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
             if (name.has_value()) {
                 sample[index] += " " + name.value();
             }
-            
+
             result.emplace_back(sample[index], depth, true);
 
             auto inner_result = get_full_explanation(*part.inner, depth + 1);
