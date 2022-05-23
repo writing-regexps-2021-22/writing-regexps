@@ -21,6 +21,8 @@ Hint get_hint(const UnexpectedEnd& error) {
     } else if (error.needs_closing() == U']') {
         additional_info = wr22::unicode::to_utf8(U'[') +
             " Character class missing closing bracket";
+    } else if (error.needs_closing() == U'>' || error.needs_closing() == U'\'') {
+        additional_info = "Incomplete named captured group structure";
     }
 
     return Hint{hint, additional_info};
@@ -40,8 +42,8 @@ Hint get_hint(const UnexpectedChar& error) {
 
     std::string additional_info;
 
-    if (error.needs_closing() == '>') {
-        additional_info = "Incomplete group structure, check for " + wr22::unicode::to_utf8('>');
+    if (error.needs_closing() == '>' || error.needs_closing() == U'\'') {
+        additional_info = "Incomplete named captured group structure";
     }
 
     if (error.char_got() == U'?' || error.char_got() == U'*' || error.char_got() == U'+') {

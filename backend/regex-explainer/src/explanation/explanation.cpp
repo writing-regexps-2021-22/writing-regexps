@@ -12,6 +12,9 @@
 // variant
 #include <variant>
 
+// fmt
+#include <fmt/format.h>
+
 namespace wr22::regex_explainer::explanation {
 
 std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, size_t depth) {
@@ -28,16 +31,16 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
             auto literal = wr22::unicode::to_utf8(part.character);
 
             auto encode_literal = static_cast<uint32_t>(part.character);
-            std::string encode_literal_string;
 
-            while (encode_literal > 0) {
-                uint32_t num = encode_literal % 10;
-                encode_literal_string += wr22::unicode::to_utf8(static_cast<char32_t>(num));
-                encode_literal /= 10;
-            }
+            std::string str_literal = fmt::format(
+                "{} {} {} {} {} {}",
+                literal,
+                sample[0],
+                literal,
+                sample[1],
+                encode_literal,
+                sample[2]);
 
-            std::string str_literal = literal + sample[0] + literal + sample[1]
-                + encode_literal_string + sample[2];
             result.emplace_back(str_literal, depth);
         },
 
@@ -147,8 +150,15 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
                     auto first = wr22::unicode::to_utf8(spanned_range.range.first());
                     auto last = wr22::unicode::to_utf8(spanned_range.range.last());
 
-                    auto str_character_class = first + "-" + last + sample[1] + first + sample[2]
-                        + last + sample[3];
+                    std::string str_character_class = fmt::format(
+                        "{}-{} {} {} {} {} {}",
+                        first,
+                        last,
+                        sample[1],
+                        first,
+                        sample[2],
+                        last,
+                        sample[3]);
 
                     result.emplace_back(str_character_class, depth);
                 }
