@@ -74,11 +74,19 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
         [&result, depth](const Group& part) {
             auto sample = get_sample(part);
 
+            std::optional<std::string> name;
             size_t index = part.capture.visit(
                 [](const regex_parser::regex::capture::Index& capture_type) { return 0; },
                 [](const regex_parser::regex::capture::None& capture_type) { return 1; },
-                [](const regex_parser::regex::capture::Name& capture_type) { return 2; });
+                [&name](const regex_parser::regex::capture::Name& capture_type) {
+                    name = capture_type.name;
+                    return 2;
+                });
 
+            if (name.has_value()) {
+                sample[index] += " " + name.value();
+            }
+            
             result.emplace_back(sample[index], depth, true);
 
             auto inner_result = get_full_explanation(*part.inner, depth + 1);
