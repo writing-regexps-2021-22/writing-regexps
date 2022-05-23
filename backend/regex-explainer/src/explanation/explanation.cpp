@@ -5,12 +5,9 @@
 
 // STL
 #include <string_view>
-
-// vector
 #include <vector>
-
-// variant
 #include <variant>
+#include <optional>
 
 // fmt
 #include <fmt/format.h>
@@ -84,9 +81,9 @@ std::vector<Explanation> get_full_explanation(const SpannedPart& spanned_part, s
                 });
 
             if (name.has_value()) {
-                sample[index] += " " + name.value();
+                sample[index] += name.value();
             }
-            
+
             result.emplace_back(sample[index], depth, true);
 
             auto inner_result = get_full_explanation(*part.inner, depth + 1);
