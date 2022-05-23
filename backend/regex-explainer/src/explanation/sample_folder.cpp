@@ -18,7 +18,7 @@ namespace wr22::regex_explainer::explanation {
     }
 
     std::vector<std::string> get_sample(const Literal &vertex) {
-        std::string pattern1 = "matches the character ",
+        std::string pattern1 = "matches the character",
                 pattern2 = "with index",
                 pattern3 = "literally (case sensitive)";
         return {pattern1, pattern2, pattern3};
