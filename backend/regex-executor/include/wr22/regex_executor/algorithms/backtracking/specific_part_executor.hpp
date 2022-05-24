@@ -1,6 +1,7 @@
 #pragma once
 
 // wr22
+#include "wr22/regex_executor/quantifier_type.hpp"
 #include <wr22/regex_executor/algorithms/backtracking/decision.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/part_executor.hpp>
@@ -70,7 +71,7 @@ public:
     explicit SpecificPartExecutor(
         utils::SpannedRef<regex_parser::regex::part::Alternatives> part_ref,
         AlternativesDecision decision);
-    bool execute(Interpreter& interpreter) const;
+    bool execute(Interpreter& interpreter);
 
 private:
     utils::SpannedRef<regex_parser::regex::part::Alternatives> m_part_ref;
@@ -101,6 +102,7 @@ public:
 private:
     size_t min_repetitions() const;
     std::optional<size_t> max_repetitions() const;
+    QuantifierType quantifier_type() const;
     bool num_repetitions_ok(size_t num_repetitions) const;
     static void greedy_walk_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
 

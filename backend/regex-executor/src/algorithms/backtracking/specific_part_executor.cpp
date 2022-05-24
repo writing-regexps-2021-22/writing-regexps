@@ -1,5 +1,7 @@
 // wr22
+#include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/specific_part_executor.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/step.hpp>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -150,10 +152,43 @@ SpecificPartExecutor<part::Alternatives>::SpecificPartExecutor(
     AlternativesDecision decision)
     : m_part_ref(part_ref), m_decision(std::move(decision)) {}
 
-bool SpecificPartExecutor<part::Alternatives>::execute(Interpreter& interpreter) const {
+bool SpecificPartExecutor<part::Alternatives>::execute(Interpreter& interpreter) {
+    m_decision.initial_string_pos = interpreter.cursor();
+    if (m_decision.decision_index == 0) {
+        interpreter.add_step(step::MatchAlternatives{
+            .regex_span = m_part_ref.span(),
+            .string_pos = interpreter.cursor(),
+        });
+    }
     interpreter.add_decision(m_decision);
     const auto& alternative = m_part_ref.item().alternatives.at(m_decision.decision_index);
     auto ref = utils::SpannedRef(alternative.part(), alternative.span());
+
+    // (2) Finalize matching as a step.
+    auto step_base = step::FinishAlternatives{
+        .regex_span = m_part_ref.span(),
+        .result =
+            step::FinishAlternatives::Success{
+                .string_span = regex_parser::span::Span::make_empty(
+                    m_decision.initial_string_pos.value()),
+                .alternative_chosen = m_decision.decision_index,
+            },
+    };
+    interpreter.add_instruction(instruction::Run{
+        .ctx = std::move(step_base),
+        .fn =
+            [](const instruction::Run::Context& ctx, Interpreter& interpreter) {
+                auto step = std::get<Step>(ctx.as_variant());
+                auto& result = std::get<step::FinishAlternatives>(step.as_variant()).result;
+                auto& span = std::get<step::FinishAlternatives::Success>(result.as_variant())
+                                 .string_span;
+                span = regex_parser::span::Span::make_from_positions(
+                    span.begin(),
+                    interpreter.cursor());
+                interpreter.add_step(std::move(step));
+            },
+    });
+    // (1) Match according to our decision.
     interpreter.add_instruction(instruction::Execute{ref});
     return true;
 }
@@ -215,8 +250,50 @@ template <typename Derived, typename Quantifier>
 bool QuantifierExecutor<Derived, Quantifier>::execute(Interpreter& interpreter) {
     std::cout << "  ~ execute quantifier" << std::endl;
 
+    // (0) First and last common steps.
+    if (!m_decision.num_repetitions.has_value()) {
+        interpreter.add_step(step::MatchQuantifier{
+            .regex_span = m_part_ref.span(),
+            .string_pos = interpreter.cursor(),
+            .quantifier_type = quantifier_type(),
+        });
+    }
+
     // (1) Make a snapshot and pass its index to the error hook.
     auto decision_ref = interpreter.add_decision(m_decision);
+    if (m_decision.num_repetitions.has_value()) {
+        auto step_base = step::FinishQuantifier{
+            .quantifier_type = quantifier_type(),
+            .regex_span = m_part_ref.span(),
+            .result =
+                step::FinishQuantifier::Success{
+                    .string_span = regex_parser::span::Span::make_empty(interpreter.cursor()),
+                    .num_repetitions = m_decision.num_repetitions.value(),
+                },
+        };
+        interpreter.add_instruction(instruction::Run{
+            .ctx = std::move(step_base),
+            .fn =
+                [](const instruction::Run::Context& ctx, Interpreter& interpreter) {
+                    auto step = std::get<Step>(ctx.as_variant());
+                    auto& result = std::get<step::FinishQuantifier>(step.as_variant()).result;
+                    auto& span = std::get<step::FinishQuantifier::Success>(result.as_variant())
+                                     .string_span;
+                    span = regex_parser::span::Span::make_from_positions(
+                        span.begin(),
+                        interpreter.cursor());
+                    interpreter.add_step(std::move(step));
+                },
+        });
+    } else {
+        interpreter.add_instruction(instruction::Run{
+            .ctx = std::monostate{},
+            .fn = [](const instruction::Run::Context&, Interpreter&) -> void {
+                throw std::logic_error(
+                    "Unbounded matching has succeeded, which is logically impossible");
+            },
+        });
+    }
 
     if (m_decision.num_repetitions.has_value()) {
         // Case 1: known number of repetitions.
@@ -316,6 +393,11 @@ size_t QuantifierExecutor<Derived, Quantifier>::min_repetitions() const {
 template <typename Derived, typename Quantifier>
 std::optional<size_t> QuantifierExecutor<Derived, Quantifier>::max_repetitions() const {
     return static_cast<const Derived*>(this)->impl_max_repetitions();
+}
+
+template <typename Derived, typename Quantifier>
+QuantifierType QuantifierExecutor<Derived, Quantifier>::quantifier_type() const {
+    return static_cast<const Derived*>(this)->impl_quantifier_type();
 }
 
 template <typename Derived, typename Quantifier>

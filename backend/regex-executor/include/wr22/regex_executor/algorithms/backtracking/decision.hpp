@@ -20,6 +20,7 @@ struct AlternativesDecision {
     // as the `Executor` is alive, provided its safety assumptions
     // are met.
     std::reference_wrapper<const PartType> part_ref;
+    std::optional<size_t> initial_string_pos;
     size_t decision_index = 0;
 
     std::optional<AlternativesDecision> reconsider(
@@ -33,6 +34,7 @@ struct QuantifierDecision {
     size_t min_repetitions;
     std::optional<size_t> num_repetitions;
     std::optional<size_t> actual_num_repetitions;
+    std::optional<size_t> initial_string_pos;
 
     std::optional<QuantifierDecision<PartT>> reconsider(
         Interpreter& interpreter,

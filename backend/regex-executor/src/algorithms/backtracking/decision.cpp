@@ -1,7 +1,9 @@
 // wr22
-#include "wr22/regex_parser/regex/part.hpp"
 #include <wr22/regex_executor/algorithms/backtracking/decision.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
+#include <wr22/regex_parser/regex/part.hpp>
+
+#include <iostream>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -16,6 +18,7 @@ std::optional<AlternativesDecision> AlternativesDecision::reconsider(
 
     auto new_decision = AlternativesDecision{
         .part_ref = part_ref,
+        .initial_string_pos = initial_string_pos,
         .decision_index = decision_index + 1,
     };
     interpreter.restore_from_snapshot(std::move(snapshot));
@@ -36,6 +39,7 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     auto new_decision = QuantifierDecision<PartT>{
         .min_repetitions = min_repetitions,
         .num_repetitions = new_num_repetitions,
+        .initial_string_pos = initial_string_pos,
     };
 
     auto& state = interpreter.current_state();
@@ -56,9 +60,11 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     state.cursor = mini_snapshot.cursor;
     auto before_step = mini_snapshot.before_step;
     interpreter.pop_mini_snapshot();
+    std::cout << "   ~ Adding backtrack step for QD(min = " << min_repetitions
+              << ", old num = " << current_num_repetitions << ")" << std::endl;
     interpreter.add_step(step::Backtrack{
         .string_pos = interpreter.cursor(),
-        .continue_after_step = before_step,
+        .continue_after_step = before_step - 1,
     });
 
     return std::move(new_decision);

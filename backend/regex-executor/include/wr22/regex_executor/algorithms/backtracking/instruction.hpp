@@ -32,7 +32,8 @@ namespace instruction {
             DecisionRef,
             utils::SpannedRef<regex_parser::regex::part::Star>,
             utils::SpannedRef<regex_parser::regex::part::Plus>,
-            utils::SpannedRef<regex_parser::regex::part::Optional>>;
+            utils::SpannedRef<regex_parser::regex::part::Optional>,
+            Step>;
         using Fn = void (*)(const Context& ctx, Interpreter& interpreter);
         Context ctx;
         Fn fn;
