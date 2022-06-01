@@ -21,9 +21,9 @@ target_compile_definitions(
 target_link_libraries(
     wr22-regex-server-library
     PUBLIC
-        fmt::fmt
+        ${FMT_TARGET}
         Crow::Crow
-        spdlog::spdlog
+        ${SPDLOG_TARGET}
         wr22-regex-parser
         wr22-regex-executor
 )

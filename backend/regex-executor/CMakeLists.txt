@@ -18,7 +18,7 @@ target_compile_options(
 target_link_libraries(
     wr22-regex-executor
     PUBLIC
-        fmt
+        ${FMT_TARGET}
         wr22-regex-parser
 )
 
