@@ -1,4 +1,4 @@
-# Communication Interface Specification v 0.1.0
+# Communication Interface Specification v 0.2.1
 
 ## Common Definitions And Convention
 1. **Backend** is the program that implements processing of regular expressions and provides
@@ -75,7 +75,6 @@ Allowed HTTP methods: `POST`.
 
 *Response payload* is a *parse result* object representing the result of the parse operation.
 This and other object types are defined below.
-
 
 1. **Parse result** is a *JSON object*. Two fields are possible, and exactly one must be present:
     1. `parse_tree` — a *spanned tree node* object corresponding to the root parse tree node,
@@ -192,6 +191,171 @@ It has the following fields:
        in the range. This field is present if and only if `single_char` is false.
     4. `last_char` — a *JSON string* of exactly one character, which is the last character contained
        in the range. This field is present if and only if `single_char` is false.
+
+#### `/match`
+Match strings against a regular expression.
+
+Allowed HTTP methods: `POST`.
+
+*Request payload* fields:
+
+1. `regex` — A *JSON string* that represents the regular expression to parse. Must always be present.
+2. `strings` — A *JSON array* of *string match requests*, each representing a string to match
+   against the regular expression. Each **string match request** is a *JSON object* with the following
+   fields:
+    1. `string` — A *JSON string* representing the string to be matched.
+    2. `fragment` — A *JSON string* describing which portion of the string needs to be matched.
+       Currently, only the value "`whole`" is supported, which corresponds to matching the entire
+       string.
+
+*Response payload* is a *match result* object representing the result of the parse operation.
+This and other object types are defined below.
+
+1. **Match result** is a *JSON object*. Two fields are possible, and exactly one must be present:
+    1. `match_results` — (if the regular expression provided is parsed correctly)
+       a *JSON array*, where each item corresponds to one string in the request's `strings` array.
+       Items are *JSON objects* with the following fields:
+        1. `algorithm` — a *JSON string* with the name of the algorithm used to match
+           this string against the regular expression. Currently, the only possible value is
+           "`backtracking`".
+        2. `matched` — a *JSON boolean* which is true if the string matches the regex and false otherwise.
+        3. `steps` — a *JSON array* of *match steps*, representing the steps the matching algorithm
+           has made.
+        4. (TODO) `captures` — (present only if `matched == true`) the captures made by capturing groups.
+    2. `parse_error` — (if the regular expression could not be parsed correctly) an *error* object as
+       defined in the `/parse` section.
+2. **Match step** is a *JSON object*. The only mandatory field is `type`, which is a *JSON string*
+   denoting the type of the step. Depending on the value of `type`, the *match step* has other fields.
+   The following is the explanation of possible values of `type`:
+    1. "`match_literal`" — Expect the next string character to match a given literal.
+       Additional fields:
+        1. `regex_span` — the *span* of the considered literal in the regex.
+        1. `literal` — a *JSON string* of one character with the literal character expected in the string.
+        1. `success` — a *JSON boolean* which is true if the string character was the same as the literal
+           and false otherwise.
+        1. `string_span` — (present only if `success == true`) a *span* object with the span
+           of the matched character in the string.
+        1. `string_pos` — (present only if `success == false`) an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+        1. `failure_reason` — (present only if `success == false`) a *JSON string* describing
+           the reason why the match was not successful. Possible values:
+            1. "`other_char`" — the next character in the string was different from the literal in the regex.
+            1. "`end_of_input`" — there was no next character in the string (the string ended there).
+    1. "`match_wildcard`" — Match any next character of the string.
+       Additional fields:
+        1. `regex_span` — the *span* of the considered wildcard ("`.`") in the regex.
+        1. `success` — a *JSON boolean* which is true if the match was successful and false otherwise.
+           For reasons why the match might have failed, see `failure_reason`.
+        1. `string_span` — (present only if `success == true`) a *span* object with the span
+           of the matched character in the string.
+        1. `string_pos` — (present only if `success == false`) an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+        1. `failure_reason` — (present only if `success == false`) a *JSON string* describing
+           the reason why the match was not successful. Possible values:
+            1. "`end_of_input`" — there was no next character in the string (the string ended there).
+    1. "`match_char_class`" — Match the next string character against a character class (a list of
+       character ranges and individual characters).
+       Additional fields:
+        1. `regex_span` — the *span* of the considered character class (e.g. "[a-z]") in the regex.
+        1. `success` — a *JSON boolean* which is true if the match was successful and false otherwise.
+        1. `string_span` — (present only if `success == true`) a *span* object with the span
+           of the matched character in the string.
+        1. `string_pos` — (present only if `success == false`) an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+        1. `failure_reason` — (present only if `success == false`) a *JSON string* describing
+           the reason why the match was not successful. Possible values:
+            1. "`end_of_input`" — there was no next character in the string (the string ended there).
+            1. "`excluded_char`" — the next string character did not match the character class.
+               E.g. `0` does not match `[a-z]`.
+    1. "`match_<quantifier>`" where `<quantifier>` is either of `star`, `plus` or `optional` —
+       Start matching the sub-expression under the quantifier repeatedly. By itself, this step
+       does not consume any characters from the string and cannot fail.
+       Additional fields:
+        1. `regex_span` — the *span* of the considered quantified expression (e.g. ".*") in the regex.
+        1. `string_pos` — an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+    1. (TODO) "`finish_<quantifier>`" where `<quantifier>` is either of `star`, `plus` or `optional` —
+       Finish repeated matching of the sub-expression under the quantifier and fix the number of repetitions
+       matched. Completes the corresponding "`match_<quantifier>`" step. Usually, this step is successful,
+       but it can fail if there is no possible number of repetitions that makes the string match
+       the regex in the current branch.
+       Additional fields:
+        1. `regex_span` — the *span* of the considered quantified expression (e.g. ".*") in the regex.
+           This is the same expression as in the corresponding `match_<quantifier>` step.
+        1. `success` — a *JSON boolean* which is true if the match was successful and false otherwise.
+        1. `string_span` — (present only if `success == true`) a *span* object with the overall
+           span of all matched repetition of the sub-expression in the string. E.g. it is `[0, 5]`
+           for the string "`abcde12345`" (current position is 0) and the regex "[a-z]+".
+        1. `num_repetitions` — (present only if `success == true`) an integer *JSON number*,
+           the number of repetitions of the sub-expression that were matched.
+        1. `string_pos` — (present only if `success == false`) an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+        1. `failure_reason` — (present only if `success == false`) a *JSON string* describing
+           the reason why the match was not successful. Possible values:
+            1. "`options_exhausted`" — there is no valid number of repetitions that makes the string
+               match the regex in the current branch.
+    1. "`begin_group`" — Indicates a beginning of a group (sub-expression in parentheses in a regex).
+       By itself, this step does not consume any characters from the string and cannot fail.
+       Additional fields:
+        1. `regex_span` — the *span* of the considered group (e.g. "([0-9]+)") in the regex.
+        1. `string_pos` — an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+    1. "`end_group`" — Indicates that a group has finished. Always corresponds to an earlier
+       "`begin_group`" step.
+       By itself, this step does not consume any characters from the string and cannot fail.
+       Additional fields:
+        1. `string_pos` — an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+    1. "`match_alternatives`" — Start trying to match alternative subexpressions (e.g. "`abc|[0-9]+`" will
+       try to match the string against "`abc`" first, and if it fails, then against "`[0-9]+`").
+       By itself, this step does not consume any characters from the string and cannot fail.
+       Additional fields:
+        1. `regex_span` — the overall *span* of the considered alternatives in the regex.
+        1. `string_pos` — an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+    1. (TODO) "`finish_alternatives`" — make a decision in the choice of an alternative. The current part
+       of the string matches this alternative. If, later, this choice will cause the rest of the string
+       not to match the rest of the regex, another alternative would be chosen.
+       Additional fields:
+        1. `regex_span` — the *span* of the considered quantified expression (e.g. ".*") in the regex.
+           This is the same expression as in the corresponding `match_<quantifier>` step.
+        1. `success` — a *JSON boolean* which is true if the match was successful and false otherwise.
+        1. `string_span` — (present only if `success == true`) the *span* of the part of the string
+           that matches the chosen alternative.
+        1. `alternative_chosen` — (present only if `success == true`) an integer *JSON number*,
+           the index of the chosen alternative (starting from 0).
+        1. `string_pos` — (present only if `success == false`) an integer *JSON number* describing
+           the current position in the string (with 0 meaning "at the beginning", 1 meaning
+           "right after the first character" and so on).
+        1. `failure_reason` — (present only if `success == false`) a *JSON string* describing
+           the reason why the match was not successful. Possible values:
+            1. "`options_exhausted`" — there is no valid alternative that makes the string
+               match the regex in the current branch.
+    1. "`backtrack`" — undo last several steps and go back to try another option, because,
+       in this branch, the string does not matches the regex, and there are still other branches
+       to try.
+       This step may cause the current position in the string to go back, "un-consuming" some characters
+       from it. Also, this step cannot fail.
+       Additional fields:
+        1. `string_pos` — an integer *JSON number* describing
+           the position in the string after this step.
+        1. `continue_after_step` — an integer *JSON number* representing
+           the index of the last step to keep (not to undo). This index
+           starts from 0, and the steps are numbered in the same way as they reside
+           in the JSON array.
+    1. "`end`" — finish matching, successfully or not.
+       Additional fields:
+        1. `string_pos` — the current position in the string at the end of the matching process.
+           If the whole string of length `N` has been matched, `string_pos = N`.
+        1. `success` — a *JSON boolean* which is true if the string matches the regex and false otherwise.
 
 ## Service Errors
 *Service errors* are represented by *error* objects. The following *error codes* are defined for

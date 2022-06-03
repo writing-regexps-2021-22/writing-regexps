@@ -1,6 +1,8 @@
 // wr22
 #include <wr22/regex_explainer/explanation/explanation.hpp>
 #include <wr22/regex_explainer/hints/hint.hpp>
+#include <wr22/regex_executor/executor.hpp>
+#include <wr22/regex_executor/regex.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_server/service_error.hpp>
@@ -123,6 +125,35 @@ namespace {
         data_json["parse_error"] = std::move(parse_error_json);
         return data_json;
     }
+
+    std::u32string decode_string(const std::string& string) {
+        try {
+            return wr22::unicode::from_utf8(string);
+        } catch (const boost::locale::conv::conversion_error& e) {
+            throw service_error::InvalidUtf8{};
+        }
+    }
+
+    std::string extract_json_string(const nlohmann::json& json) {
+        if (!json.is_string()) {
+            throw service_error::InvalidRequestJsonStructure{};
+        }
+        return json.get<std::string>();
+    }
+
+    std::u32string decode_json_string(const nlohmann::json& json) {
+        return decode_string(extract_json_string(json));
+    }
+
+    const nlohmann::json& json_at(const nlohmann::json& json, const char* key) {
+        if (!json.is_object()) {
+            throw service_error::InvalidRequestJsonStructure{};
+        }
+        if (auto it = json.find(key); it != json.end()) {
+            return *it;
+        }
+        throw service_error::InvalidRequestJsonStructure{};
+    }
 }  // namespace
 
 Webserver::Webserver() {
@@ -130,40 +161,57 @@ Webserver::Webserver() {
         .methods(crow::HTTPMethod::POST)(handle_errors_in(*this, &Webserver::parse_handler));
     CROW_ROUTE(m_app, "/explain")
         .methods(crow::HTTPMethod::POST)(handle_errors_in(*this, &Webserver::explain_handler));
+    CROW_ROUTE(m_app, "/match")
+        .methods(crow::HTTPMethod::POST)(handle_errors_in(*this, &Webserver::match_handler));
 }
 
 void Webserver::run() {
     m_app.loglevel(crow::LogLevel::Warning).port(6666).bindaddr("127.0.0.1").run();
 }
 
-nlohmann::json Webserver::parse_handler(
-    [[maybe_unused]] const crow::request& request,
-    crow::response& response) {
+nlohmann::json Webserver::parse_handler(const crow::request& request, crow::response& response) {
     const auto request_json = nlohmann::json::parse(request.body, nullptr, false);
     if (request_json.is_discarded()) {
         throw service_error::InvalidRequestJson{};
     }
 
-    if (!request_json.is_object()) {
-        throw service_error::InvalidRequestJsonStructure{};
+    auto regex = decode_json_string(json_at(request_json, "regex"));
+    return parse_regex_to_json(regex);
+}
+
+nlohmann::json Webserver::match_handler(const crow::request& request, crow::response& response) {
+    const auto request_json = nlohmann::json::parse(request.body, nullptr, false);
+    if (request_json.is_discarded()) {
+        throw service_error::InvalidRequestJson{};
     }
 
-    if (auto it = request_json.find("regex"); it != request_json.end()) {
-        const auto& regex_json_string = *it;
-        if (!regex_json_string.is_string()) {
-            throw service_error::InvalidRequestJsonStructure{};
+    auto regex_string = decode_json_string(json_at(request_json, "regex"));
+    auto json_strings = json_at(request_json, "strings");
+    if (!json_strings.is_array()) {
+        throw service_error::InvalidRequestJson{};
+    }
+
+    // TODO: handle parse errors.
+    auto regex = regex_executor::Regex(regex_parser::parser::parse_regex(regex_string));
+
+    auto response_json = nlohmann::json::object();
+    auto& match_results = response_json["match_results"];
+    match_results = nlohmann::json::array();
+    auto executor = regex_executor::Executor(regex);
+
+    for (const auto& json_string_spec : json_strings) {
+        auto string = decode_json_string(json_at(json_string_spec, "string"));
+        auto fragment_string = extract_json_string(json_at(json_string_spec, "fragment"));
+        if (fragment_string != "whole") {
+            // STUB.
+            throw service_error::NotImplemented{};
         }
 
-        auto regex_string = regex_json_string.get<std::string>();
-        try {
-            auto regex_string_utf32 = wr22::unicode::from_utf8(regex_string);
-            return parse_regex_to_json(regex_string_utf32);
-        } catch (const boost::locale::conv::conversion_error& e) {
-            throw service_error::InvalidUtf8{};
-        }
-    } else {
-        throw service_error::InvalidRequestJsonStructure{};
+        auto result = executor.execute(string);
+        match_results.push_back(std::move(result));
     }
+
+    return response_json;
 }
 
 nlohmann::json Webserver::explain_handler(
