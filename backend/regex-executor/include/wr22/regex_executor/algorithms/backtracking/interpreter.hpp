@@ -3,6 +3,7 @@
 // wr22
 #include <wr22/regex_executor/algorithms/backtracking/decision_ref.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/decision_snapshot.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter_state.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/step.hpp>
 #include <wr22/regex_executor/regex.hpp>
@@ -23,7 +24,9 @@ public:
     std::optional<char32_t> current_char() const;
     void advance();
 
-    DecisionRef add_decision(Decision decision);
+    DecisionRef add_decision(
+        Decision decision,
+        utils::SpannedRef<regex_parser::regex::Part> decision_making_part);
     const DecisionSnapshot& decision_snapshot_at(DecisionRef ref) const;
     DecisionSnapshot& decision_snapshot_at(DecisionRef ref);
     std::optional<DecisionRef> last_decision_ref() const;
@@ -67,7 +70,6 @@ private:
     std::vector<DecisionSnapshot> m_decision_snapshots;
     std::stack<InterpreterStateMiniSnapshot> m_mini_snapshots;
     std::vector<Step> m_steps;
-    std::optional<Instruction> m_current_instruction;
 };
 
 }  // namespace wr22::regex_executor::algorithms::backtracking

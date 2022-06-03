@@ -67,14 +67,17 @@ template <>
 class SpecificPartExecutor<regex_parser::regex::part::Alternatives> {
 public:
     explicit SpecificPartExecutor(
-        utils::SpannedRef<regex_parser::regex::part::Alternatives> part_ref);
+        utils::SpannedRef<regex_parser::regex::part::Alternatives> part_ref,
+        utils::SpannedRef<regex_parser::regex::Part> part_var_ref);
     explicit SpecificPartExecutor(
         utils::SpannedRef<regex_parser::regex::part::Alternatives> part_ref,
+        utils::SpannedRef<regex_parser::regex::Part> part_var_ref,
         AlternativesDecision decision);
     bool execute(Interpreter& interpreter);
 
 private:
     utils::SpannedRef<regex_parser::regex::part::Alternatives> m_part_ref;
+    utils::SpannedRef<regex_parser::regex::Part> m_part_var_ref;
     AlternativesDecision m_decision;
 };
 
@@ -92,23 +95,30 @@ private:
 template <typename Derived, typename Quantifier>
 class QuantifierExecutor {
 public:
-    explicit QuantifierExecutor(utils::SpannedRef<Quantifier> part_ref);
+    struct StopImmediatelyTag {};
+
     explicit QuantifierExecutor(
         utils::SpannedRef<Quantifier> part_ref,
-        QuantifierDecision<Quantifier> decision,
-        size_t already_matched);
+        utils::SpannedRef<regex_parser::regex::Part> part_var_ref);
+    explicit QuantifierExecutor(
+        utils::SpannedRef<Quantifier> part_ref,
+        utils::SpannedRef<regex_parser::regex::Part> part_var_ref,
+        StopImmediatelyTag tag);
     bool execute(Interpreter& interpreter);
 
 private:
-    size_t min_repetitions() const;
-    std::optional<size_t> max_repetitions() const;
-    QuantifierType quantifier_type() const;
-    bool num_repetitions_ok(size_t num_repetitions) const;
+    static size_t min_repetitions();
+    static std::optional<size_t> max_repetitions();
+    static QuantifierType quantifier_type();
+
+    static bool num_repetitions_ok(size_t num_repetitions);
+
     static void greedy_walk_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
+    static void finalize_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
 
     utils::SpannedRef<Quantifier> m_part_ref;
-    QuantifierDecision<Quantifier> m_decision;
-    size_t m_already_matched;
+    utils::SpannedRef<regex_parser::regex::Part> m_part_var_ref;
+    bool m_stop_immediately;
 };
 
 template <typename Quantifier>
@@ -120,9 +130,9 @@ class SpecificPartExecutor<regex_parser::regex::part::Star> :
 public:
     using QuantifierExecutorBase<regex_parser::regex::part::Star>::QuantifierExecutor;
 
-    QuantifierType impl_quantifier_type() const;
-    size_t impl_min_repetitions() const;
-    std::optional<size_t> impl_max_repetitions() const;
+    static QuantifierType impl_quantifier_type();
+    static size_t impl_min_repetitions();
+    static std::optional<size_t> impl_max_repetitions();
 };
 
 template <>
@@ -131,9 +141,9 @@ class SpecificPartExecutor<regex_parser::regex::part::Plus> :
 public:
     using QuantifierExecutorBase<regex_parser::regex::part::Plus>::QuantifierExecutor;
 
-    QuantifierType impl_quantifier_type() const;
-    size_t impl_min_repetitions() const;
-    std::optional<size_t> impl_max_repetitions() const;
+    static QuantifierType impl_quantifier_type();
+    static size_t impl_min_repetitions();
+    static std::optional<size_t> impl_max_repetitions();
 };
 
 template <>
@@ -142,9 +152,9 @@ class SpecificPartExecutor<regex_parser::regex::part::Optional> :
 public:
     using QuantifierExecutorBase<regex_parser::regex::part::Optional>::QuantifierExecutor;
 
-    QuantifierType impl_quantifier_type() const;
-    size_t impl_min_repetitions() const;
-    std::optional<size_t> impl_max_repetitions() const;
+    static QuantifierType impl_quantifier_type();
+    static size_t impl_min_repetitions();
+    static std::optional<size_t> impl_max_repetitions();
 };
 
 }  // namespace wr22::regex_executor::algorithms::backtracking

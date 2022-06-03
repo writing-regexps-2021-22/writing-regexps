@@ -31,11 +31,9 @@ struct AlternativesDecision {
 template <typename PartT>
 struct QuantifierDecision {
     using PartType = PartT;
-    size_t min_repetitions;
-    std::optional<size_t> num_repetitions;
-    std::optional<size_t> actual_num_repetitions;
-    std::optional<size_t> initial_string_pos;
 
+    bool stop_here = false;
+    bool can_go_back = false;
     std::optional<QuantifierDecision<PartT>> reconsider(
         Interpreter& interpreter,
         InterpreterStateSnapshot snapshot) const;

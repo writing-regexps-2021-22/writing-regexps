@@ -20,7 +20,7 @@ struct InterpreterState {
 
 struct InterpreterStateSnapshot {
     InterpreterState state;
-    Instruction current_instruction;
+    utils::SpannedRef<regex_parser::regex::Part> decision_making_part;
     size_t before_step;
 };
 

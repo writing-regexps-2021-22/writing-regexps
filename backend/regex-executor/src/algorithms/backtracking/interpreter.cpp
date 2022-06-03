@@ -17,6 +17,23 @@
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
+std::ostream& operator<<(std::ostream& out, const Instruction& instruction) {
+    instruction.visit(
+        [&out](const instruction::AddStep& instruction) {
+            out << "add step: " << nlohmann::json(instruction.step).dump();
+        },
+        [&out](const instruction::Execute& instruction) {
+            out << "execute part: " << instruction.part.span();
+            if (instruction.forced_decision.has_value()) {
+                out << " [forced decision]";
+            }
+        },
+        [&out](const instruction::Run& instruction) {
+            out << "run function: " << (void*)instruction.fn;
+        });
+    return out;
+}
+
 Interpreter::Interpreter(const Regex& regex, const std::u32string_view& string_ref)
     : m_string_ref(string_ref) {
     auto ref = utils::SpannedRef<regex_parser::regex::Part>(
@@ -36,11 +53,13 @@ void Interpreter::advance() {
     ++m_current_state.cursor;
 }
 
-DecisionRef Interpreter::add_decision(Decision decision) {
+DecisionRef Interpreter::add_decision(
+    Decision decision,
+    utils::SpannedRef<regex_parser::regex::Part> decision_making_part) {
     auto index = m_decision_snapshots.size();
     auto snapshot = InterpreterStateSnapshot{
         .state = m_current_state,
-        .current_instruction = m_current_instruction.value(),
+        .decision_making_part = decision_making_part,
         .before_step = m_steps.size(),
     };
     auto decision_snapshot = DecisionSnapshot{
@@ -129,23 +148,6 @@ bool Interpreter::finished() const {
     return m_current_state.instructions.empty();
 }
 
-std::ostream& operator<<(std::ostream& out, const Instruction& instruction) {
-    instruction.visit(
-        [&out](const instruction::AddStep& instruction) {
-            out << "add step: " << nlohmann::json(instruction.step).dump();
-        },
-        [&out](const instruction::Execute& instruction) {
-            out << "execute part: " << instruction.part.span();
-            if (instruction.forced_decision.has_value()) {
-                out << " [forced decision]";
-            }
-        },
-        [&out](const instruction::Run& instruction) {
-            out << "run function: " << (void*)instruction.fn;
-        });
-    return out;
-}
-
 void Interpreter::run_instruction() {
     std::cout << "==> Run instruction [at " << cursor()
               << "]: " << wr22::unicode::to_utf8(m_string_ref.substr(0, cursor())) << "|"
@@ -162,7 +164,7 @@ void Interpreter::run_instruction() {
 
     auto instruction = std::move(m_current_state.instructions.back());
     m_current_state.instructions.pop_back();
-    m_current_instruction = instruction;
+
     std::cout << " -> " << instruction << std::endl;
     auto ok = instruction.visit(
         [this](const instruction::AddStep& instruction) {
@@ -179,7 +181,10 @@ void Interpreter::run_instruction() {
                         auto specific_part = utils::SpannedRef<PartType>(
                             std::get<PartType>(part.item().as_variant()),
                             part.span());
-                        auto executor = ApplicatorType::construct_executor(specific_part, decision);
+                        auto executor = ApplicatorType::construct_executor(
+                            specific_part,
+                            part,
+                            decision);
                         return executor.execute(*this);
                     });
             } else {
@@ -220,7 +225,7 @@ void Interpreter::run_instruction() {
         auto last_decision_snapshot = std::move(m_decision_snapshots.back());
         m_decision_snapshots.pop_back();
         std::cout << " ---> pop decision snapshot" << std::endl;
-        auto current_instruction = last_decision_snapshot.snapshot.current_instruction;
+        auto decision_making_part = last_decision_snapshot.snapshot.decision_making_part;
         auto has_reconsidered = last_decision_snapshot.decision.visit(
             [this, snapshot = std::move(last_decision_snapshot.snapshot)](auto& decision) {
                 std::cout << " ---> reconsider decision" << std::endl;
@@ -236,17 +241,10 @@ void Interpreter::run_instruction() {
             });
 
         if (has_reconsidered) {
-            auto new_instruction = current_instruction.visit(
-                [decision = std::move(last_decision_snapshot.decision)](
-                    instruction::Execute instruction) mutable -> Instruction {
-                    instruction.forced_decision = std::move(decision);
-                    return instruction;
-                },
-                [](auto&) -> Instruction {
-                    throw std::logic_error("No snapshot could have been made just before an "
-                                           "instruction other that `Execute`");
-                });
-            m_current_state.instructions.push_back(std::move(new_instruction));
+            m_current_state.instructions.push_back(instruction::Execute{
+                .part = decision_making_part,
+                .forced_decision = std::move(last_decision_snapshot.decision),
+            });
             break;
         }
     }

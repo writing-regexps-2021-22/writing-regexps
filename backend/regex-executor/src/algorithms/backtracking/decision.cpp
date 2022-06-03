@@ -22,52 +22,21 @@ std::optional<AlternativesDecision> AlternativesDecision::reconsider(
         .decision_index = decision_index + 1,
     };
     interpreter.restore_from_snapshot(std::move(snapshot));
-    return std::move(new_decision);
+    return new_decision;
 }
 
 template <typename PartT>
 std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     Interpreter& interpreter,
     InterpreterStateSnapshot snapshot) const {
-    auto current_num_repetitions = num_repetitions.has_value() ? num_repetitions.value()
-                                                               : actual_num_repetitions.value() + 1;
-    // TODO: custom min.
-    if (current_num_repetitions == min_repetitions) {
+    if (stop_here) {
         return std::nullopt;
     }
-    auto new_num_repetitions = current_num_repetitions - 1;
     auto new_decision = QuantifierDecision<PartT>{
-        .min_repetitions = min_repetitions,
-        .num_repetitions = new_num_repetitions,
-        .initial_string_pos = initial_string_pos,
+        .stop_here = true,
     };
-
-    auto& state = interpreter.current_state();
-    state.error_hooks = std::move(snapshot.state.error_hooks);
-    state.instructions = std::move(snapshot.state.instructions);
-    state.counters = std::move(snapshot.state.counters);
-    // if (state.counters.empty()) {
-    //     throw std::logic_error("")
-    // }
-    // state.counters.back() += new_num_repetitions;
-
-    auto maybe_mini_snapshot = interpreter.last_mini_snapshot();
-    if (!maybe_mini_snapshot.has_value()) {
-        throw std::logic_error("No mini-snapshot exists, but QuantifierDecision<...> has not yet "
-                               "exhausted its options");
-    }
-    auto mini_snapshot = maybe_mini_snapshot.value().get();
-    state.cursor = mini_snapshot.cursor;
-    auto before_step = mini_snapshot.before_step;
-    interpreter.pop_mini_snapshot();
-    std::cout << "   ~ Adding backtrack step for QD(min = " << min_repetitions
-              << ", old num = " << current_num_repetitions << ")" << std::endl;
-    interpreter.add_step(step::Backtrack{
-        .string_pos = interpreter.cursor(),
-        .continue_after_step = before_step - 1,
-    });
-
-    return std::move(new_decision);
+    interpreter.restore_from_snapshot(std::move(snapshot));
+    return new_decision;
 }
 
 // Explicit instantiations.

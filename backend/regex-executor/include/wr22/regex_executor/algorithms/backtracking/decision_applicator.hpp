@@ -22,8 +22,9 @@ struct DecisionApplicator<AlternativesDecision> {
 
     static ExecutorType construct_executor(
         utils::SpannedRef<PartType> part_ref,
+        utils::SpannedRef<regex_parser::regex::Part> part_var_ref,
         AlternativesDecision decision) {
-        return ExecutorType(part_ref, std::move(decision));
+        return ExecutorType(part_ref, part_var_ref, std::move(decision));
     }
 };
 
@@ -41,9 +42,9 @@ struct DecisionApplicator<QuantifierDecision<Quantifier>> {
 
     static ExecutorType construct_executor(
         utils::SpannedRef<PartType> part_ref,
-        QuantifierDecision<PartType> decision) {
-        auto num_repetitions = decision.num_repetitions.value();
-        return ExecutorType(part_ref, std::move(decision), num_repetitions);
+        utils::SpannedRef<regex_parser::regex::Part> part_var_ref,
+        [[maybe_unused]] QuantifierDecision<PartType> decision) {
+        return ExecutorType(part_ref, part_var_ref, typename ExecutorType::StopImmediatelyTag{});
     }
 };
 

@@ -30,9 +30,15 @@ namespace instruction {
         using Context = wr22::utils::Adt<
             std::monostate,
             DecisionRef,
-            utils::SpannedRef<regex_parser::regex::part::Star>,
-            utils::SpannedRef<regex_parser::regex::part::Plus>,
-            utils::SpannedRef<regex_parser::regex::part::Optional>,
+            std::pair<
+                utils::SpannedRef<regex_parser::regex::part::Star>,
+                utils::SpannedRef<regex_parser::regex::Part>>,
+            std::pair<
+                utils::SpannedRef<regex_parser::regex::part::Plus>,
+                utils::SpannedRef<regex_parser::regex::Part>>,
+            std::pair<
+                utils::SpannedRef<regex_parser::regex::part::Optional>,
+                utils::SpannedRef<regex_parser::regex::Part>>,
             Step>;
         using Fn = void (*)(const Context& ctx, Interpreter& interpreter);
         Context ctx;
