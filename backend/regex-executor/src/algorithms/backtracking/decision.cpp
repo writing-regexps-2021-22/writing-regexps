@@ -3,8 +3,6 @@
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
 
-#include <iostream>
-
 namespace wr22::regex_executor::algorithms::backtracking {
 
 namespace part = regex_parser::regex::part;

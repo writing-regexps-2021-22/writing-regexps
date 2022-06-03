@@ -1,8 +1,8 @@
 // wr22
-#include "wr22/regex_executor/utils/spanned_ref.hpp"
 #include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/specific_part_executor.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/step.hpp>
+#include <wr22/regex_executor/utils/spanned_ref.hpp>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -252,8 +252,6 @@ QuantifierExecutor<Derived, Quantifier>::QuantifierExecutor(
 
 template <typename Derived, typename Quantifier>
 bool QuantifierExecutor<Derived, Quantifier>::execute(Interpreter& interpreter) {
-    std::cout << "  ~ execute quantifier" << std::endl;
-
     if (m_stop_immediately) {
         return true;
     }
@@ -334,7 +332,6 @@ template <typename Derived, typename Quantifier>
 void QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
     const instruction::Run::Context& ctx,
     Interpreter& interpreter) {
-    std::cout << "  ~ greedy_walk_run_func" << std::endl;
 
     // (1) Read current state and compute the next one or stop.
     auto num_repetitions_so_far = interpreter.counter_at_offset(0);
@@ -368,7 +365,6 @@ void QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
         .ctx = std::monostate{},
         .fn =
             []([[maybe_unused]] const instruction::Run::Context& ctx, Interpreter& interpreter) {
-                std::cout << "  ~ greedy_walk_run_func: increment" << std::endl;
                 auto& current_num_repetitions = interpreter.counter_at_offset(0);
                 ++current_num_repetitions;
             },

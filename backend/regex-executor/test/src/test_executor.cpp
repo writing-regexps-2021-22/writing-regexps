@@ -6,9 +6,6 @@
 #include <wr22/regex_executor/regex.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 
-// stl
-#include <iostream>
-
 using wr22::regex_executor::Executor;
 using wr22::regex_executor::Regex;
 using wr22::regex_parser::parser::parse_regex;

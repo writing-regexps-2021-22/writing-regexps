@@ -8,8 +8,6 @@
 #include <wr22/regex_executor/utils/spanned_ref.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
 
-#include <iostream>
-
 namespace wr22::regex_executor::algorithms::backtracking {
 
 template <typename T>

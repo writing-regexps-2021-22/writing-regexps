@@ -13,26 +13,7 @@
 #include <fmt/compile.h>
 #include <fmt/core.h>
 
-#include <iostream>
-
 namespace wr22::regex_executor::algorithms::backtracking {
-
-std::ostream& operator<<(std::ostream& out, const Instruction& instruction) {
-    instruction.visit(
-        [&out](const instruction::AddStep& instruction) {
-            out << "add step: " << nlohmann::json(instruction.step).dump();
-        },
-        [&out](const instruction::Execute& instruction) {
-            out << "execute part: " << instruction.part.span();
-            if (instruction.forced_decision.has_value()) {
-                out << " [forced decision]";
-            }
-        },
-        [&out](const instruction::Run& instruction) {
-            out << "run function: " << (void*)instruction.fn;
-        });
-    return out;
-}
 
 Interpreter::Interpreter(const Regex& regex, const std::u32string_view& string_ref)
     : m_string_ref(string_ref) {
@@ -149,23 +130,9 @@ bool Interpreter::finished() const {
 }
 
 void Interpreter::run_instruction() {
-    std::cout << "==> Run instruction [at " << cursor()
-              << "]: " << wr22::unicode::to_utf8(m_string_ref.substr(0, cursor())) << "|"
-              << wr22::unicode::to_utf8(m_string_ref.substr(cursor())) << std::endl;
-    std::cout << " ### Counters: ";
-    for (auto x : m_current_state.counters) {
-        std::cout << x << ", ";
-    }
-    std::cout << ">>" << std::endl;
-    std::cout << " ### Instructions:" << std::endl;
-    for (auto x : m_current_state.instructions) {
-        std::cout << "        <*> " << x << std::endl;
-    }
-
     auto instruction = std::move(m_current_state.instructions.back());
     m_current_state.instructions.pop_back();
 
-    std::cout << " -> " << instruction << std::endl;
     auto ok = instruction.visit(
         [this](const instruction::AddStep& instruction) {
             add_step(std::move(instruction.step));
@@ -198,17 +165,14 @@ void Interpreter::run_instruction() {
         });
 
     if (ok) {
-        std::cout << " -> ok" << std::endl;
         return;
     }
-    std::cout << " -> not ok" << std::endl;
 
     // Reconsider the decision if matching failed.
 
     // Run the topmost error hook if any.
     if (!m_current_state.error_hooks.empty()) {
         const auto& hook = m_current_state.error_hooks.top();
-        std::cout << " -> run error hook " << (void*)hook.fn << std::endl;
         hook(*this);
         // No need to pop the hook, as `<DecisionType>::reconsider()` will take care of it.
     }
@@ -217,25 +181,20 @@ void Interpreter::run_instruction() {
     // We might need to go arbitrarily deep into the decision stack, since some decisions
     // we have made may have no more options remaining.
     while (true) {
-        std::cout << " -> enter reconsider loop" << std::endl;
         if (m_decision_snapshots.empty()) {
             throw MatchFailure{};
         }
 
         auto last_decision_snapshot = std::move(m_decision_snapshots.back());
         m_decision_snapshots.pop_back();
-        std::cout << " ---> pop decision snapshot" << std::endl;
         auto decision_making_part = last_decision_snapshot.snapshot.decision_making_part;
         auto has_reconsidered = last_decision_snapshot.decision.visit(
             [this, snapshot = std::move(last_decision_snapshot.snapshot)](auto& decision) {
-                std::cout << " ---> reconsider decision" << std::endl;
                 auto new_decision = decision.reconsider(*this, std::move(snapshot));
                 if (!new_decision.has_value()) {
-                    std::cout << " ---> failed" << std::endl;
                     // Options exhausted for this decision, try the next one.
                     return false;
                 }
-                std::cout << " ---> succeeded" << std::endl;
                 decision = std::move(new_decision.value());
                 return true;
             });
@@ -248,7 +207,6 @@ void Interpreter::run_instruction() {
             break;
         }
     }
-    std::cout << " -> exit reconsider loop" << std::endl;
 }
 
 void Interpreter::finalize() {
