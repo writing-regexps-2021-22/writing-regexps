@@ -57,6 +57,9 @@ public:
     void finalize();
     void finalize_error();
 
+    void add_indexed_capture(Capture capture);
+    void add_named_capture(std::string_view name, Capture capture);
+
     std::vector<Step> into_steps() &&;
 
     const InterpreterState& current_state() const;

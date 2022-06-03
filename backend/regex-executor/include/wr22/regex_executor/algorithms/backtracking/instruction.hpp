@@ -29,6 +29,7 @@ namespace instruction {
     struct Run {
         using Context = wr22::utils::Adt<
             std::monostate,
+            std::pair<size_t, utils::SpannedRef<regex_parser::regex::part::Group>>,
             DecisionRef,
             std::pair<
                 utils::SpannedRef<regex_parser::regex::part::Star>,

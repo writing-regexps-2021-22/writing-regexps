@@ -16,7 +16,16 @@
 namespace wr22::regex_executor::algorithms::backtracking {
 
 Interpreter::Interpreter(const Regex& regex, const std::u32string_view& string_ref)
-    : m_string_ref(string_ref) {
+    : m_string_ref(string_ref),
+      m_current_state(InterpreterState{
+          .captures =
+              Captures{
+                  .whole =
+                      Capture{
+                          .string_span = regex_parser::span::Span::make_empty(0),
+                      },
+              },
+      }) {
     auto ref = utils::SpannedRef<regex_parser::regex::Part>(
         regex.root_part().part(),
         regex.root_part().span());
@@ -214,6 +223,9 @@ void Interpreter::finalize() {
         .string_pos = cursor(),
         .result = step::End::Success{},
     });
+    m_current_state.captures.whole.string_span = regex_parser::span::Span::make_from_positions(
+        0,
+        cursor());
 }
 
 void Interpreter::finalize_error() {
@@ -221,6 +233,16 @@ void Interpreter::finalize_error() {
         .string_pos = cursor(),
         .result = step::End::Failure{},
     });
+}
+
+void Interpreter::add_indexed_capture(Capture capture) {
+    auto index = m_current_state.capture_counter;
+    m_current_state.captures.indexed.insert({index, capture});
+    ++m_current_state.capture_counter;
+}
+
+void Interpreter::add_named_capture(std::string_view name, Capture capture) {
+    m_current_state.captures.named.insert_or_assign(name, capture);
 }
 
 size_t Interpreter::parse_counter_offset(size_t offset) const {

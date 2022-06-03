@@ -1,4 +1,5 @@
 // wr22
+#include "wr22/regex_parser/regex/capture.hpp"
 #include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/specific_part_executor.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/step.hpp>
@@ -125,18 +126,41 @@ SpecificPartExecutor<part::Group>::SpecificPartExecutor(utils::SpannedRef<part::
     : m_part_ref(part_ref) {}
 
 bool SpecificPartExecutor<part::Group>::execute(Interpreter& interpreter) const {
+    // (4) Populate the capture info and end the group.
     interpreter.add_instruction(instruction::Run{
-        .ctx = std::monostate{},
+        .ctx = std::make_pair(interpreter.cursor(), m_part_ref),
         .fn =
             []([[maybe_unused]] const instruction::Run::Context& ctx, Interpreter& interpreter) {
+                auto [begin, part] = std::get<
+                    std::pair<size_t, utils::SpannedRef<regex_parser::regex::part::Group>>>(
+                    ctx.as_variant());
+                auto end = interpreter.cursor();
+
                 interpreter.add_step(step::EndGroup{
-                    .string_pos = interpreter.cursor(),
+                    .string_pos = end,
                 });
+                auto cap = Capture{
+                    .string_span = regex_parser::span::Span::make_from_positions(begin, end),
+                };
+
+                namespace capture = regex_parser::regex::capture;
+                part.item().capture.visit(
+                    [cap, &interpreter]([[maybe_unused]] const capture::Index& rule) {
+                        interpreter.add_indexed_capture(cap);
+                    },
+                    [cap, &interpreter]([[maybe_unused]] const capture::None& rule) {},
+                    [cap, &interpreter](const capture::Name& rule) {
+                        interpreter.add_named_capture(rule.name, cap);
+                    });
             },
     });
+
+    // (3) Execute the inner element.
     const auto& inner = *m_part_ref.item().inner;
     auto inner_ref = utils::SpannedRef(inner.part(), inner.span());
     interpreter.add_instruction(instruction::Execute{inner_ref});
+
+    // (2) Begin the group.
     interpreter.add_instruction(instruction::AddStep{step::BeginGroup{
         .regex_span = m_part_ref.span(),
         .string_pos = interpreter.cursor(),

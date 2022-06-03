@@ -21,14 +21,15 @@ MatchResult Executor::execute(const std::u32string_view& string) const {
         interpreter.finalize();
     } catch (const MatchFailure&) {
         interpreter.finalize_error();
-        return MatchResult {
+        return MatchResult{
             .matched = false,
             .steps = std::move(interpreter).into_steps(),
         };
     }
 
-    return MatchResult {
+    return MatchResult{
         .matched = true,
+        .captures = std::move(interpreter.current_state().captures),
         .steps = std::move(interpreter).into_steps(),
     };
 }
