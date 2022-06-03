@@ -12,7 +12,7 @@ namespace part = regex_parser::regex::part;
 std::optional<AlternativesDecision> AlternativesDecision::reconsider(
     Interpreter& interpreter,
     InterpreterStateSnapshot snapshot) const {
-    if (decision_index >= part_ref.get().alternatives.size()) {
+    if (decision_index + 1 >= part_ref.get().alternatives.size()) {
         return std::nullopt;
     }
 
@@ -30,6 +30,9 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     Interpreter& interpreter,
     InterpreterStateSnapshot snapshot) const {
     if (stop_here) {
+        return std::nullopt;
+    }
+    if (!can_go_back) {
         return std::nullopt;
     }
     auto new_decision = QuantifierDecision<PartT>{
