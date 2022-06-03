@@ -199,9 +199,18 @@ void Interpreter::run_instruction() {
         auto decision_making_part = last_decision_snapshot.snapshot.decision_making_part;
         auto has_reconsidered = last_decision_snapshot.decision.visit(
             [this, snapshot = std::move(last_decision_snapshot.snapshot)](auto& decision) {
+                using DecisionType = std::decay_t<decltype(decision)>;
+
+                auto decision_making_part = snapshot.decision_making_part;
                 auto new_decision = decision.reconsider(*this, std::move(snapshot));
                 if (!new_decision.has_value()) {
                     // Options exhausted for this decision, try the next one.
+                    using ApplicatorType = DecisionApplicator<DecisionType>;
+                    auto specific_ref = utils::SpannedRef(
+                        std::get<typename ApplicatorType::PartType>(
+                            decision_making_part.item().as_variant()),
+                        decision_making_part.span());
+                    ApplicatorType::finalize_exhausted(decision, specific_ref, *this);
                     return false;
                 }
                 decision = std::move(new_decision.value());

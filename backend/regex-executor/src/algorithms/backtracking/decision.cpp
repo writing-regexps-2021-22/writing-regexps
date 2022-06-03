@@ -33,9 +33,8 @@ std::optional<QuantifierDecision<PartT>> QuantifierDecision<PartT>::reconsider(
     if (!can_go_back) {
         return std::nullopt;
     }
-    auto new_decision = QuantifierDecision<PartT>{
-        .stop_here = true,
-    };
+    auto new_decision = *this;
+    new_decision.stop_here = true;
     interpreter.restore_from_snapshot(std::move(snapshot));
     return new_decision;
 }

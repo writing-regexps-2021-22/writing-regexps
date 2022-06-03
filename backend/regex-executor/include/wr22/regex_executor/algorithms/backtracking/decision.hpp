@@ -34,6 +34,7 @@ struct QuantifierDecision {
 
     bool stop_here = false;
     bool can_go_back = false;
+    bool is_first = false;
     std::optional<QuantifierDecision<PartT>> reconsider(
         Interpreter& interpreter,
         InterpreterStateSnapshot snapshot) const;

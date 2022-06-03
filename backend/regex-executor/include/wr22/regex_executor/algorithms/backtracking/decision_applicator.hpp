@@ -1,13 +1,16 @@
 #pragma once
 
 // wr22
-#include <algorithm>
 #include <wr22/regex_executor/algorithms/backtracking/decision.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/failure_reason.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/specific_part_executor.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/step.hpp>
 #include <wr22/regex_executor/utils/spanned_ref.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
 
 // stl
+#include <algorithm>
 #include <type_traits>
 
 namespace wr22::regex_executor::algorithms::backtracking {
@@ -25,6 +28,20 @@ struct DecisionApplicator<AlternativesDecision> {
         utils::SpannedRef<regex_parser::regex::Part> part_var_ref,
         AlternativesDecision decision) {
         return ExecutorType(part_ref, part_var_ref, std::move(decision));
+    }
+
+    static void finalize_exhausted(
+        [[maybe_unused]] AlternativesDecision decision,
+        utils::SpannedRef<PartType> part_ref,
+        Interpreter& interpreter) {
+        interpreter.add_step(step::FinishAlternatives{
+            .regex_span = part_ref.span(),
+            .result =
+                step::FinishAlternatives::Failure{
+                    .string_pos = interpreter.cursor(),
+                    .failure_reason = failure_reasons::OptionsExhausted{},
+                },
+        });
     }
 };
 
@@ -45,6 +62,23 @@ struct DecisionApplicator<QuantifierDecision<Quantifier>> {
         utils::SpannedRef<regex_parser::regex::Part> part_var_ref,
         [[maybe_unused]] QuantifierDecision<PartType> decision) {
         return ExecutorType(part_ref, part_var_ref, typename ExecutorType::StopImmediatelyTag{});
+    }
+
+    static void finalize_exhausted(
+        QuantifierDecision<Quantifier> decision,
+        utils::SpannedRef<PartType> part_ref,
+        Interpreter& interpreter) {
+        if (decision.is_first) {
+            interpreter.add_step(step::FinishQuantifier{
+                .quantifier_type = ExecutorType::quantifier_type(),
+                .regex_span = part_ref.span(),
+                .result =
+                    step::FinishQuantifier::Failure{
+                        .string_pos = interpreter.cursor(),
+                        .failure_reason = failure_reasons::OptionsExhausted{},
+                    },
+            });
+        }
     }
 };
 

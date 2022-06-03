@@ -1,9 +1,9 @@
 // wr22
-#include "wr22/regex_parser/regex/capture.hpp"
 #include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/specific_part_executor.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/step.hpp>
 #include <wr22/regex_executor/utils/spanned_ref.hpp>
+#include <wr22/regex_parser/regex/capture.hpp>
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
@@ -360,21 +360,30 @@ void QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
     // (1) Read current state and compute the next one or stop.
     auto num_repetitions_so_far = interpreter.counter_at_offset(0);
     auto next_num_repetitions = num_repetitions_so_far + 1;
-    if (auto max = max_repetitions(); max.has_value() && next_num_repetitions > max.value()) {
-        // Stop just before the maximum allowable number of repetitions is exceeded.
-        return;
-    }
     auto can_go_back = next_num_repetitions > min_repetitions();
+    auto is_first = num_repetitions_so_far == 0;
 
     const auto& [part, part_var] = std::get<
         std::pair<utils::SpannedRef<Quantifier>, utils::SpannedRef<regex_parser::regex::Part>>>(
         ctx.as_variant());
+    if (auto max = max_repetitions(); max.has_value() && next_num_repetitions > max.value()) {
+        // Stop just before the maximum allowable number of repetitions is exceeded.
+        interpreter.add_decision(
+            QuantifierDecision<Quantifier>{
+                .stop_here = true,
+                .can_go_back = can_go_back,
+                .is_first = is_first,
+            },
+            part_var);
+        return;
+    }
 
     // (2) Make a decision to continue matching.
     interpreter.add_decision(
         QuantifierDecision<Quantifier>{
             .stop_here = false,
             .can_go_back = can_go_back,
+            .is_first = is_first,
         },
         part_var);
 

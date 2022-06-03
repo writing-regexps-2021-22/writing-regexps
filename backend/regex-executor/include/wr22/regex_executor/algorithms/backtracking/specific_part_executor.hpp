@@ -104,11 +104,11 @@ public:
         StopImmediatelyTag tag);
     bool execute(Interpreter& interpreter);
 
-private:
     static size_t min_repetitions();
     static std::optional<size_t> max_repetitions();
     static QuantifierType quantifier_type();
 
+private:
     static bool num_repetitions_ok(size_t num_repetitions);
 
     static void greedy_walk_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
