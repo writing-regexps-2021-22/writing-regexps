@@ -112,6 +112,8 @@ namespace {
             error_data["first"] = wr22::unicode::to_utf8(e.first());
             error_data["last"] = wr22::unicode::to_utf8(e.last());
             error_data["hint"] = regex_explainer::hints::get_hint(e);
+        } catch (const err::TooStronglyNested&) {
+            error_code = "too_strongly_nested";
         } catch (const err::ParseError& e) {
             throw std::runtime_error(fmt::format("Unknown parse error: {}", e.what()));
         }

@@ -21,6 +21,7 @@ using regex_parser_tests::vec;
 using wr22::regex_parser::parser::parse_regex;
 using wr22::regex_parser::parser::errors::ExpectedEnd;
 using wr22::regex_parser::parser::errors::InvalidRange;
+using wr22::regex_parser::parser::errors::TooStronglyNested;
 using wr22::regex_parser::parser::errors::UnexpectedChar;
 using wr22::regex_parser::parser::errors::UnexpectedEnd;
 using wr22::regex_parser::regex::CharacterClassData;
@@ -976,4 +977,10 @@ TEST_CASE("Quantifiers before any atom", "[regex]") {
         UnexpectedChar,
         Predicate<UnexpectedChar>(
             [](const auto& e) { return e.position() == 0 && e.char_got() == U'*'; }));
+}
+
+TEST_CASE("Excess nesting is detected", "[regex]") {
+    CHECK_THROWS_AS(
+        parse_regex(U"(((((((((((((((((((((((((((((((((((((((((((((("),
+        TooStronglyNested);
 }

@@ -127,4 +127,11 @@ private:
     char32_t m_last;
 };
 
+/// The error signalling that the regular expression has too many levels of nesting to be parsed.
+class TooStronglyNested : public ParseError {
+public:
+    /// Constructor.
+    TooStronglyNested();
+};
+
 }  // namespace wr22::regex_parser::parser::errors

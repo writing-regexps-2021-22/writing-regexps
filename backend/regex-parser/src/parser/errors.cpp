@@ -104,4 +104,7 @@ char32_t InvalidRange::last() const {
     return m_last;
 }
 
+TooStronglyNested::TooStronglyNested()
+    : ParseError("Regular expression has too many levels of nesting") {}
+
 }  // namespace wr22::regex_parser::parser::errors

@@ -1,9 +1,10 @@
 // wr22
-#include "wr22/regex_parser/span/span.hpp"
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
 #include <wr22/regex_parser/regex/part.hpp>
+#include <wr22/regex_parser/span/span.hpp>
 #include <wr22/unicode/conversion.hpp>
+#include <wr22/utils/nonconcurrent_semaphore.hpp>
 
 // stl
 #include <optional>
@@ -36,7 +37,7 @@ public:
     ///
     /// SAFETY:
     /// The iterators must not be invalidated as long as this `Parser` object is still alive.
-    Parser(Iter begin, Sentinel end) : m_iter(begin), m_end(end) {}
+    Parser(Iter begin, Sentinel end) : m_iter(begin), m_end(end), m_recursion_semaphore(64) {}
 
     /// Ensure that the parser has consumed all of the input.
     ///
@@ -60,6 +61,7 @@ public:
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::SpannedPart parse_regex() {
         // Empty regexes are handled as empty sequences.
+        auto rg = guard_recursion();
         return parse_alternatives();
     }
 
@@ -70,6 +72,7 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::SpannedPart parse_alternatives() {
+        auto rg = guard_recursion();
         auto begin = track_pos();
 
         auto part = parse_sequence_or_empty();
@@ -98,6 +101,7 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::SpannedPart parse_sequence() {
+        auto rg = guard_recursion();
         auto begin = track_pos();
 
         auto part = parse_atom();
@@ -119,6 +123,7 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::SpannedPart parse_sequence_or_empty() {
+        auto rg = guard_recursion();
         auto begin = track_pos();
         if (ends_regex(lookahead())) {
             return make_spanned(begin, regex::part::Empty());
@@ -136,6 +141,7 @@ public:
     ///
     /// @throws errors::ParseError if the input cannot be parsed.
     regex::SpannedPart parse_atom() {
+        auto rg = guard_recursion();
         auto begin = track_pos();
         std::optional<regex::SpannedPart> result;
         auto la1 = lookahead_nonempty(
@@ -182,6 +188,7 @@ public:
     /// @throws errors::UnexpectedEnd if all characters from the input have already been consumed.
     /// @throws errors::UnexpectedChar if the next input character is not `.`.
     regex::SpannedPart parse_wildcard() {
+        auto rg = guard_recursion();
         auto position = m_pos;
         expect_char(U'.', "the wildcard character (`.`)", std::nullopt);
         return regex::SpannedPart(regex::part::Wildcard(), Span::make_single_position(position));
@@ -193,6 +200,7 @@ public:
     ///
     /// @throws errors::UnexpectedEnd if all characters from the input have already been consumed.
     regex::SpannedPart parse_char_literal() {
+        auto rg = guard_recursion();
         auto position = m_pos;
         auto c = next_char_validated(is_valid_for_char_literal, "a plain character", std::nullopt);
         return regex::SpannedPart(regex::part::Literal(c), Span::make_single_position(position));
@@ -202,6 +210,7 @@ public:
     ///
     /// @returns the parsed group (`regex::part::Group`).
     regex::SpannedPart parse_group() {
+        auto rg = guard_recursion();
         auto begin = track_pos();
 
         expect_char(U'(', "an opening parenthesis (`(`)", std::nullopt);
@@ -279,6 +288,7 @@ public:
     ///
     /// @returns the UTF-8 encoded group name as an `std::string`.
     std::pair<std::string, Span> parse_group_name(char32_t closing_par) {
+        auto rg = guard_recursion();
         auto begin_pos = m_pos;
 
         constexpr auto first_char_expected_msg = "the first character of a capture group name";
@@ -306,6 +316,7 @@ public:
     ///
     /// @returns the character class AST node.
     regex::SpannedPart parse_char_class() {
+        auto rg = guard_recursion();
         using regex::CharacterRange;
         using regex::SpannedCharacterRange;
         using span::Span;
@@ -659,12 +670,23 @@ private:
         return regex::SpannedPart(std::move(part), span);
     }
 
+    utils::NonconcurrentSemaphoreGuard guard_recursion() {
+        auto maybe_guard = m_recursion_semaphore.enter();
+        if (!maybe_guard.has_value()) {
+            throw errors::TooStronglyNested();
+        }
+
+        return std::move(maybe_guard.value());
+    }
+
     /// The forward iterator at the current read position.
     Iter m_iter;
     /// The end iterator.
     Sentinel m_end;
     /// The number of characters consumed so far, or, equivalently, the 0-based position in the input.
     size_t m_pos = 0;
+    /// The semaphore controlling recursion depth.
+    utils::NonconcurrentSemaphore m_recursion_semaphore;
 };
 
 /// The type deduction guideline for `Parser`.
