@@ -79,8 +79,8 @@ This and other object types are defined below.
 1. **Parse result** is a *JSON object*. Two fields are possible, and exactly one must be present:
     1. `parse_tree` — a *spanned tree node* object corresponding to the root parse tree node,
        if the regular expression was successfully parsed.
-    2. `parse_error` — an *error* object describing the parse error if it has occurred.
-       The possible *error codes* are defined as follows:
+    2. `parse_error` — a **parse error** object describing the parse error if it has occurred.
+       Each **parse error** object is an *error* object with the following possible *error codes*:
         1. "`expected_end`" — if a regular expression was expected to end at a certain position but did not.
            It is unspecified when exactly this error will be raised, and it may be subject to change.
            Error `data` is a *JSON object* with the following fields:
@@ -221,8 +221,15 @@ This and other object types are defined below.
         2. `matched` — a *JSON boolean* which is true if the string matches the regex and false otherwise.
         3. `steps` — a *JSON array* of *match steps*, representing the steps the matching algorithm
            has made.
-        4. (TODO) `captures` — (present only if `matched == true`) the captures made by capturing groups.
-    2. `parse_error` — (if the regular expression could not be parsed correctly) an *error* object as
+        4. `captures` — (present only if `matched == true`) the captures made by capturing groups.
+           It is a *JSON object* with the following fields:
+            1. `whole` — a *captured substring* object corresponding to the whole match.
+            2. `by_index` — a *JSON object* whose keys are stringified integers (e.g. `"1"`, `"25"`, etc.)
+               and values are the *captured substring* objects that correspond to the capturing groups with the
+               specified index.
+            3. `by_name` — a *JSON object* whose keys are names of named capturing groups
+               and values are the *captured substring* objects that correspond to these groups.
+    2. `parse_error` — (if the regular expression could not be parsed correctly) the *parse error* object as
        defined in the `/parse` section.
 2. **Match step** is a *JSON object*. The only mandatory field is `type`, which is a *JSON string*
    denoting the type of the step. Depending on the value of `type`, the *match step* has other fields.
@@ -278,7 +285,7 @@ This and other object types are defined below.
         1. `string_pos` — an integer *JSON number* describing
            the current position in the string (with 0 meaning "at the beginning", 1 meaning
            "right after the first character" and so on).
-    1. (TODO) "`finish_<quantifier>`" where `<quantifier>` is either of `star`, `plus` or `optional` —
+    1. "`finish_<quantifier>`" where `<quantifier>` is either of `star`, `plus` or `optional` —
        Finish repeated matching of the sub-expression under the quantifier and fix the number of repetitions
        matched. Completes the corresponding "`match_<quantifier>`" step. Usually, this step is successful,
        but it can fail if there is no possible number of repetitions that makes the string match
@@ -321,7 +328,7 @@ This and other object types are defined below.
         1. `string_pos` — an integer *JSON number* describing
            the current position in the string (with 0 meaning "at the beginning", 1 meaning
            "right after the first character" and so on).
-    1. (TODO) "`finish_alternatives`" — make a decision in the choice of an alternative. The current part
+    1. "`finish_alternatives`" — make a decision in the choice of an alternative. The current part
        of the string matches this alternative. If, later, this choice will cause the rest of the string
        not to match the rest of the regex, another alternative would be chosen.
        Additional fields:
@@ -356,6 +363,8 @@ This and other object types are defined below.
         1. `string_pos` — the current position in the string at the end of the matching process.
            If the whole string of length `N` has been matched, `string_pos = N`.
         1. `success` — a *JSON boolean* which is true if the string matches the regex and false otherwise.
+1. **Captured substring** is a *span* that corresponds to the position of a captured fragment of the input
+   string.
 
 ## Service Errors
 *Service errors* are represented by *error* objects. The following *error codes* are defined for
