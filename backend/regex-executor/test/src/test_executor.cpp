@@ -207,3 +207,27 @@ TEST_CASE("Repeated group captures by name work") {
                 },
         });
 }
+
+TEST_CASE("Empty group under an unbounded quantifier works") {
+    auto regex = Regex(parse_regex(U"(?:)*"));
+    auto ex = Executor(regex);
+    CHECK(ex.execute(U"").matched);
+    CHECK_FALSE(ex.execute(U"a").matched);
+}
+
+TEST_CASE("Empty group under a bounded quantifier works") {
+    auto regex = Regex(parse_regex(U"(?:)?"));
+    auto ex = Executor(regex);
+    CHECK(ex.execute(U"").matched);
+    CHECK_FALSE(ex.execute(U"a").matched);
+}
+
+TEST_CASE("Empty optional under an unbounded quantifier works") {
+    auto regex = Regex(parse_regex(U"(?:a?)*b"));
+    auto ex = Executor(regex);
+    CHECK(ex.execute(U"ab").matched);
+    CHECK(ex.execute(U"b").matched);
+    CHECK(ex.execute(U"aaaaaab").matched);
+    CHECK_FALSE(ex.execute(U"aaa").matched);
+    CHECK_FALSE(ex.execute(U"").matched);
+}

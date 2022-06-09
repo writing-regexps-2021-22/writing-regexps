@@ -152,6 +152,7 @@ bool SpecificPartExecutor<part::Group>::execute(Interpreter& interpreter) const 
                     [cap, &interpreter](const capture::Name& rule) {
                         interpreter.add_named_capture(rule.name, cap);
                     });
+                return true;
             },
     });
 
@@ -213,6 +214,7 @@ bool SpecificPartExecutor<part::Alternatives>::execute(Interpreter& interpreter)
                     span.begin(),
                     interpreter.cursor());
                 interpreter.add_step(std::move(step));
+                return true;
             },
     });
     // (1) Match according to our decision.
@@ -329,7 +331,7 @@ bool QuantifierExecutor<Derived, Quantifier>::num_repetitions_ok(size_t num_repe
 }
 
 template <typename Derived, typename Quantifier>
-void QuantifierExecutor<Derived, Quantifier>::finalize_run_func(
+bool QuantifierExecutor<Derived, Quantifier>::finalize_run_func(
     const instruction::Run::Context& ctx,
     Interpreter& interpreter) {
     auto num_repetitions = interpreter.counter_at_offset(0);
@@ -350,10 +352,11 @@ void QuantifierExecutor<Derived, Quantifier>::finalize_run_func(
     });
     interpreter.pop_counter();
     interpreter.pop_counter();
+    return true;
 }
 
 template <typename Derived, typename Quantifier>
-void QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
+bool QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
     const instruction::Run::Context& ctx,
     Interpreter& interpreter) {
 
@@ -375,7 +378,7 @@ void QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
                 .is_first = is_first,
             },
             part_var);
-        return;
+        return true;
     }
 
     // (2) Make a decision to continue matching.
@@ -387,26 +390,42 @@ void QuantifierExecutor<Derived, Quantifier>::greedy_walk_run_func(
         },
         part_var);
 
-    // (5) Run quasi-recursively.
+    // (6) Run quasi-recursively.
     interpreter.add_instruction(instruction::Run{
         .ctx = ctx,
         .fn = greedy_walk_run_func,
     });
 
-    // (4) Increment the repetition counter.
+    // (5) Increment the repetition counter.
     interpreter.add_instruction(instruction::Run{
         .ctx = std::monostate{},
         .fn =
             []([[maybe_unused]] const instruction::Run::Context& ctx, Interpreter& interpreter) {
                 auto& current_num_repetitions = interpreter.counter_at_offset(0);
                 ++current_num_repetitions;
+                return true;
             },
     });
+
+    // (4) Break infinite loops if detected. Only makes sense when the upper bound on the number
+    // of matches is not set.
+    auto current_num_repetitions = interpreter.counter_at_offset(0);
+    if (!max_repetitions().has_value() && current_num_repetitions >= min_repetitions()) {
+        auto cursor_before_match = interpreter.cursor();
+        interpreter.add_instruction(instruction::Run{
+            .ctx = cursor_before_match,
+            .fn = [](const instruction::Run::Context& ctx, Interpreter& interpreter) {
+                auto cursor_before_match = std::get<size_t>(ctx.as_variant());
+                auto cursor_after_match = interpreter.cursor();
+                return cursor_after_match != cursor_before_match;
+            }});
+    }
 
     // (3) Match one item
     const auto& inner = *part.item().inner;
     auto ref = utils::SpannedRef<regex_parser::regex::Part>(inner.part(), inner.span());
     interpreter.add_instruction(instruction::Execute{ref});
+    return true;
 }
 
 template class QuantifierExecutor<SpecificPartExecutor<part::Star>, part::Star>;

@@ -29,6 +29,7 @@ namespace instruction {
     struct Run {
         using Context = wr22::utils::Adt<
             std::monostate,
+            size_t,
             std::pair<size_t, utils::SpannedRef<regex_parser::regex::part::Group>>,
             DecisionRef,
             std::pair<
@@ -41,11 +42,11 @@ namespace instruction {
                 utils::SpannedRef<regex_parser::regex::part::Optional>,
                 utils::SpannedRef<regex_parser::regex::Part>>,
             Step>;
-        using Fn = void (*)(const Context& ctx, Interpreter& interpreter);
+        using Fn = bool (*)(const Context& ctx, Interpreter& interpreter);
         Context ctx;
         Fn fn;
 
-        void operator()(Interpreter& interpreter) const;
+        bool operator()(Interpreter& interpreter) const;
     };
 
     struct ExpectEnd {};

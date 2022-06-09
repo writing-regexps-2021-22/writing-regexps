@@ -3,8 +3,8 @@
 
 namespace wr22::regex_executor::algorithms::backtracking {
 
-void instruction::Run::operator()(Interpreter& interpreter) const {
-    fn(ctx, interpreter);
+bool instruction::Run::operator()(Interpreter& interpreter) const {
+    return fn(ctx, interpreter);
 }
 
 }  // namespace wr22::regex_executor::algorithms::backtracking

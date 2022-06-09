@@ -170,8 +170,7 @@ void Interpreter::run_instruction() {
             }
         },
         [this](const instruction::Run& instruction) {
-            instruction(*this);
-            return true;
+            return instruction(*this);
         },
         [this](const instruction::ExpectEnd& instruction) {
             return cursor() == m_string_ref.length();

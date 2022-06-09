@@ -111,8 +111,8 @@ public:
 private:
     static bool num_repetitions_ok(size_t num_repetitions);
 
-    static void greedy_walk_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
-    static void finalize_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
+    static bool greedy_walk_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
+    static bool finalize_run_func(const instruction::Run::Context& ctx, Interpreter& interpreter);
 
     utils::SpannedRef<Quantifier> m_part_ref;
     utils::SpannedRef<regex_parser::regex::Part> m_part_var_ref;
