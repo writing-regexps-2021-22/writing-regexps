@@ -1,5 +1,6 @@
 // wr22
 #include <wr22/regex_executor/algorithms/backtracking/executor.hpp>
+#include <wr22/regex_executor/algorithms/backtracking/instruction.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/interpreter.hpp>
 #include <wr22/regex_executor/algorithms/backtracking/match_failure.hpp>
 

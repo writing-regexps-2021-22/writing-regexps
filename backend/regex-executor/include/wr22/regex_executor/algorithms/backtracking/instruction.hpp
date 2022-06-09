@@ -48,7 +48,9 @@ namespace instruction {
         void operator()(Interpreter& interpreter) const;
     };
 
-    using Adt = wr22::utils::Adt<Execute, AddStep, Run>;
+    struct ExpectEnd {};
+
+    using Adt = wr22::utils::Adt<Execute, AddStep, Run, ExpectEnd>;
 };  // namespace instruction
 
 using Instruction = instruction::Adt;

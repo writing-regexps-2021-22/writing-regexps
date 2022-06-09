@@ -29,6 +29,7 @@ Interpreter::Interpreter(const Regex& regex, const std::u32string_view& string_r
     auto ref = utils::SpannedRef<regex_parser::regex::Part>(
         regex.root_part().part(),
         regex.root_part().span());
+    m_current_state.instructions.push_back(instruction::ExpectEnd{});
     m_current_state.instructions.push_back(instruction::Execute{ref});
 }
 
@@ -171,6 +172,9 @@ void Interpreter::run_instruction() {
         [this](const instruction::Run& instruction) {
             instruction(*this);
             return true;
+        },
+        [this](const instruction::ExpectEnd& instruction) {
+            return cursor() == m_string_ref.length();
         });
 
     if (ok) {
