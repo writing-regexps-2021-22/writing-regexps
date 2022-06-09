@@ -1,10 +1,11 @@
 // wr22
-#include <wr22/regex_explainer/explanation/explanation.hpp>
-#include <wr22/regex_explainer/hints/hint.hpp>
 #include <wr22/regex_executor/executor.hpp>
 #include <wr22/regex_executor/regex.hpp>
+#include <wr22/regex_explainer/explanation/explanation.hpp>
+#include <wr22/regex_explainer/hints/hint.hpp>
 #include <wr22/regex_parser/parser/errors.hpp>
 #include <wr22/regex_parser/parser/regex.hpp>
+#include <wr22/regex_parser/regex/part.hpp>
 #include <wr22/regex_server/service_error.hpp>
 #include <wr22/regex_server/service_error/internal_error.hpp>
 #include <wr22/regex_server/service_error/invalid_request_json.hpp>
@@ -17,6 +18,7 @@
 // stl
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 // crow
@@ -74,16 +76,20 @@ namespace {
         };
     }
 
-    nlohmann::json parse_regex_to_json(const std::u32string_view& regex) {
+    struct ParseSuccess {
+        regex_parser::regex::SpannedPart part;
+    };
+    struct ParseFailure {
+        nlohmann::json parse_error;
+    };
+
+    utils::Adt<ParseSuccess, ParseFailure> parse_regex(std::u32string_view regex) {
         namespace err = wr22::regex_parser::parser::errors;
 
         auto error_code = "";
         auto error_data = nlohmann::json::object();
         try {
-            auto parse_tree = wr22::regex_parser::parser::parse_regex(regex);
-            auto data_json = nlohmann::json::object();
-            data_json["parse_tree"] = nlohmann::json(parse_tree);
-            return data_json;
+            return ParseSuccess{wr22::regex_parser::parser::parse_regex(regex)};
         } catch (const err::ExpectedEnd& e) {
             error_code = "expected_end";
             error_data["position"] = e.position();
@@ -117,15 +123,27 @@ namespace {
         } catch (const err::ParseError& e) {
             throw std::runtime_error(fmt::format("Unknown parse error: {}", e.what()));
         }
-
         // If here, an error has occurred.
         auto parse_error_json = nlohmann::json::object();
         parse_error_json["code"] = error_code;
-        parse_error_json["data"] = error_data;
+        parse_error_json["data"] = std::move(error_data);
 
-        auto data_json = nlohmann::json::object();
-        data_json["parse_error"] = std::move(parse_error_json);
-        return data_json;
+        return ParseFailure{std::move(parse_error_json)};
+    }
+
+    nlohmann::json parse_regex_to_json(const std::u32string_view& regex) {
+        return std::move(parse_regex(regex))
+            .visit(
+                [](const ParseSuccess& success) -> nlohmann::json {
+                    auto data_json = nlohmann::json::object();
+                    data_json["parse_tree"] = success.part;
+                    return data_json;
+                },
+                [](ParseFailure failure) -> nlohmann::json {
+                    auto data_json = nlohmann::json::object();
+                    data_json["parse_error"] = std::move(failure.parse_error);
+                    return data_json;
+                });
     }
 
     std::u32string decode_string(const std::string& string) {
@@ -194,26 +212,35 @@ nlohmann::json Webserver::match_handler(const crow::request& request, crow::resp
     }
 
     // TODO: handle parse errors.
-    auto regex = regex_executor::Regex(regex_parser::parser::parse_regex(regex_string));
+    return parse_regex(regex_string)
+        .visit(
+            [&](ParseSuccess& success) {
+                auto root_part = std::move(success.part);
+                auto regex = regex_executor::Regex(std::move(root_part));
+                auto response_json = nlohmann::json::object();
+                auto& match_results = response_json["match_results"];
+                match_results = nlohmann::json::array();
+                auto executor = regex_executor::Executor(regex);
 
-    auto response_json = nlohmann::json::object();
-    auto& match_results = response_json["match_results"];
-    match_results = nlohmann::json::array();
-    auto executor = regex_executor::Executor(regex);
+                for (const auto& json_string_spec : json_strings) {
+                    auto string = decode_json_string(json_at(json_string_spec, "string"));
+                    auto fragment_string = extract_json_string(
+                        json_at(json_string_spec, "fragment"));
+                    if (fragment_string != "whole") {
+                        // STUB.
+                        throw service_error::NotImplemented{};
+                    }
 
-    for (const auto& json_string_spec : json_strings) {
-        auto string = decode_json_string(json_at(json_string_spec, "string"));
-        auto fragment_string = extract_json_string(json_at(json_string_spec, "fragment"));
-        if (fragment_string != "whole") {
-            // STUB.
-            throw service_error::NotImplemented{};
-        }
-
-        auto result = executor.execute(string);
-        match_results.push_back(std::move(result));
-    }
-
-    return response_json;
+                    auto result = executor.execute(string);
+                    match_results.push_back(std::move(result));
+                }
+                return response_json;
+            },
+            [](ParseFailure& failure) {
+                auto response_json = nlohmann::json::object();
+                response_json["parse_error"] = std::move(failure.parse_error);
+                return response_json;
+            });
 }
 
 nlohmann::json Webserver::explain_handler(
@@ -237,12 +264,21 @@ nlohmann::json Webserver::explain_handler(
         auto regex_string = regex_json_string.get<std::string>();
         try {
             auto regex_string_utf32 = wr22::unicode::from_utf8(regex_string);
-            auto root_part = wr22::regex_parser::parser::parse_regex(regex_string_utf32);
-            auto full_explanation = wr22::regex_explainer::explanation::get_full_explanation(
-                root_part);
-            auto response_json = nlohmann::json::object();
-            response_json["explanation"] = full_explanation;
-            return response_json;
+            return parse_regex(regex_string_utf32)
+                .visit(
+                    [](const ParseSuccess& success) {
+                        const auto& root_part = success.part;
+                        auto full_explanation = wr22::regex_explainer::explanation::
+                            get_full_explanation(root_part);
+                        auto response_json = nlohmann::json::object();
+                        response_json["explanation"] = full_explanation;
+                        return response_json;
+                    },
+                    [](ParseFailure failure) {
+                        auto response_json = nlohmann::json::object();
+                        response_json["parse_error"] = std::move(failure.parse_error);
+                        return response_json;
+                    });
         } catch (const boost::locale::conv::conversion_error& e) {
             throw service_error::InvalidUtf8{};
         }
